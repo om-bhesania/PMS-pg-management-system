@@ -12,6 +12,14 @@ import {
   Skeleton,
   SkeletonCircle,
   SkeletonText,
+  AlertDialog,
+  AlertDialogOverlay,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogBody,
+  AlertDialogFooter,
+  Button,
+  IconButton,
 } from "@chakra-ui/react";
 import { useFormik } from "formik";
 import useAddData from "../hooks/addData";
@@ -95,40 +103,31 @@ const Users = () => {
     },
   });
 
-
-
-const updateTenent = async (id, newData) => {
-  try {
-    await db.collection("tenents").doc(id).update(newData);
-  } catch (error) {
-    throw new Error("Failed to update tenent.");
-  }
-};
-
-const deleteTenent = async (id) => {
-  try {
-    await db.collection("tenents").doc(id).delete();
-  } catch (error) {
-    throw new Error("Failed to delete tenent.");
-  }
-};
-
- 
   const [isOpen, setIsOpen] = useState(false);
   const [selectedTenent, setSelectedTenent] = useState(null);
-  const [updatedData, setUpdatedData] = useState({}); 
+  const [editableFields, setEditableFields] = useState({});
 
   const onClose = () => setIsOpen(false);
 
   const handleEdit = (tenent) => {
     setSelectedTenent(tenent);
-    setIsOpen(true);
-    setUpdatedData(tenent);
+    setEditableFields({
+      ...editableFields,
+      [tenent.id]: true,
+    });
   };
 
-  const handleConfirmEdit = async () => {
+  const handleSave = async (tenent) => {
     try {
-      await updateTenent(selectedTenent.id, updatedData);
+      const docRef = db.collection("tenents").doc(tenent.id);
+      await docRef.update({
+        tenentName: tenent.tenentName,
+        tenentContact: tenent.tenentContact,
+        tenentEmail: tenent.tenentEmail,
+        tenentRoom: tenent.tenentRoom,
+        tenentStay: tenent.tenentStay,
+        tenentRent: tenent.tenentRent,
+      });
       toast({
         title: "Success",
         description: "Tenent data updated successfully.",
@@ -136,26 +135,24 @@ const deleteTenent = async (id) => {
         duration: 3000,
         isClosable: true,
       });
+      setEditableFields({
+        ...editableFields,
+        [tenent.id]: false,
+      });
     } catch (error) {
       toast({
         title: "Error",
-        description: error.message,
+        description: "Failed to update tenent data.",
         status: "error",
         duration: 3000,
         isClosable: true,
       });
     }
-    setIsOpen(false);
   };
 
-  const handleDelete = (tenent) => {
-    setSelectedTenent(tenent);
-    setIsOpen(true);
-  };
-
-  const handleConfirmDelete = async () => {
+  const handleDelete = async (tenent) => {
     try {
-      await deleteTenent(selectedTenent.id);
+      await db.collection("tenents").doc(tenent.id).delete();
       toast({
         title: "Success",
         description: "Tenent deleted successfully.",
@@ -166,12 +163,25 @@ const deleteTenent = async (id) => {
     } catch (error) {
       toast({
         title: "Error",
-        description: error.message,
+        description: "Failed to delete tenent.",
         status: "error",
         duration: 3000,
         isClosable: true,
       });
     }
+  };
+
+  const handleFieldChange = (tenent, field, e) => {
+    tenent[field] = e.target.textContent;
+    setEditableFields({
+      ...editableFields,
+      [tenent.id]: true,
+    });
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!selectedTenent) return;
+    await handleDelete(selectedTenent);
     setIsOpen(false);
   };
 
@@ -200,46 +210,31 @@ const deleteTenent = async (id) => {
             <Title size={"lg"} customClass={"mb-8"}>
               Total Tenents {tenents.length}
             </Title>
-            <Skeleton isLoaded={!loading} className="h-full">
+            <Skeleton isLoaded={!loading}>
               <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th
-                        scope="col"
-                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                      >
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Tenent Name
                       </th>
-                      <th
-                        scope="col"
-                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                      >
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Tenent Contact
                       </th>
-                      <th
-                        scope="col"
-                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                      >
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Tenent Email
                       </th>
-                      <th
-                        scope="col"
-                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                      >
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Tenent Room
                       </th>
-                      <th
-                        scope="col"
-                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                      >
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Tenent Stay
                       </th>
-                      <th
-                        scope="col"
-                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                      >
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Tenent Rent
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Actions
                       </th>
                     </tr>
                   </thead>
@@ -247,41 +242,105 @@ const deleteTenent = async (id) => {
                   <tbody className="bg-white divide-y divide-gray-200">
                     {tenents.map((t) => (
                       <tr key={t.id}>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-900">
-                            {t.tenentName}
-                          </div>
+                        <td
+                          className="px-6 py-4 whitespace-nowrap"
+                          contentEditable={editableFields[t.id]}
+                          onBlur={(e) => handleFieldChange(t, "tenentName", e)}
+                        >
+                          {t.tenentName}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-900">
-                            {t.tenentContact}
-                          </div>
+                        <td
+                          className="px-6 py-4 whitespace-nowrap"
+                          contentEditable={editableFields[t.id]}
+                          onBlur={(e) =>
+                            handleFieldChange(t, "tenentContact", e)
+                          }
+                        >
+                          {t.tenentContact}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-900">
-                            {t.tenentEmail}
-                          </div>
+                        <td
+                          className="px-6 py-4 whitespace-nowrap"
+                          contentEditable={editableFields[t.id]}
+                          onBlur={(e) => handleFieldChange(t, "tenentEmail", e)}
+                        >
+                          {t.tenentEmail}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-900">
-                            {t.tenentRoom}
-                          </div>
+                        <td
+                          className="px-6 py-4 whitespace-nowrap"
+                          contentEditable={editableFields[t.id]}
+                          onBlur={(e) => handleFieldChange(t, "tenentRoom", e)}
+                        >
+                          {t.tenentRoom}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-900">
-                            {t.tenentStay}
-                          </div>
+                        <td
+                          className="px-6 py-4 whitespace-nowrap"
+                          contentEditable={editableFields[t.id]}
+                          onBlur={(e) => handleFieldChange(t, "tenentStay", e)}
+                        >
+                          {t.tenentStay}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-900">
-                            {t.tenentRent}
-                          </div>
+                        <td
+                          className="px-6 py-4 whitespace-nowrap"
+                          contentEditable={editableFields[t.id]}
+                          onBlur={(e) => handleFieldChange(t, "tenentRent", e)}
+                        >
+                          {t.tenentRent}
+                        </td>
+                        <td>
+                          {!editableFields[t.id] ? (
+                            <IconButton
+                              icon={
+                                <i className="fa-regular fa-pen-to-square"></i>
+                              }
+                              onClick={() => handleEdit(t)}
+                              mr={2}
+                              colorScheme="blue"
+                            />
+                          ) : (
+                            <IconButton
+                              icon={
+                                <i className="fa-regular fa-floppy-disk"></i>
+                              }
+                              onClick={() => handleSave(t)}
+                              mr={2}
+                              colorScheme="green"
+                            />
+                          )}
+                          <IconButton
+                            icon={<i className="fa-solid fa-trash"></i>}
+                            onClick={() => handleDelete(t)}
+                            colorScheme="red"
+                          />
                         </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
+              <AlertDialog isOpen={isOpen} onClose={onClose}>
+                <AlertDialogOverlay>
+                  <AlertDialogContent>
+                    <AlertDialogHeader fontSize="lg" fontWeight="bold">
+                      Delete Tenent
+                    </AlertDialogHeader>
+
+                    <AlertDialogBody>
+                      Are you sure? You can't undo this action afterwards.
+                    </AlertDialogBody>
+
+                    <AlertDialogFooter>
+                      <Button onClick={onClose}>Cancel</Button>
+                      <Button
+                        colorScheme="red"
+                        onClick={handleConfirmDelete}
+                        ml={3}
+                      >
+                        Delete
+                      </Button>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialogOverlay>
+              </AlertDialog>
             </Skeleton>
           </TabPanel>
           <TabPanel>
