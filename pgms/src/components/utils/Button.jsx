@@ -22,7 +22,7 @@ const Button = ({ role, label, variant, customClass, url, onClick }) => {
     <>
       {role === "button" ? (
         <button
-          className={`${style[variant]} || ${baseStyle} ${customClass} role--${role}`}
+          className={`${style[variant]}  ${baseStyle ? baseStyle : ''} ${customClass ? customClass : ''} role--${role}`}
           onClick={onClick}
           type="button"
           href={url}

@@ -8,68 +8,80 @@ import {
   StatHelpText,
   Stat,
   useToast,
-  Spinner,
   Skeleton,
-  SkeletonCircle,
-  SkeletonText,
-  AlertDialog,
-  AlertDialogOverlay,
-  AlertDialogContent,
-  AlertDialogHeader,
-  AlertDialogBody,
-  AlertDialogFooter,
   Button,
   IconButton,
+  Modal,
+  ModalOverlay,
+  ModalContent,
+  ModalHeader,
+  ModalCloseButton,
+  ModalBody,
+  ModalFooter,
+  FormControl,
+  FormLabel,
+  Input,
+  useDisclosure,
 } from "@chakra-ui/react";
 import { useFormik } from "formik";
 import useAddData from "../hooks/addData";
 import useGetData from "../hooks/getData";
-import { useEffect, useState } from "react";
-import { db } from "../firebase/firebase";
-
+import { useContext, useState } from "react";
+import useModifyData from '../hooks/modifyData';
+import useDeleteData from "../hooks/deleteData";
+import useAddTenentCreds from "../hooks/addTenent";
+import useLoggedInUserData from "../hooks/useLoggedInUserData";
+import { AuthContext } from "../components/authProvider";
 const Users = () => {
-  const { addTenents } = useAddData();
-  const { loading, error, tenents, fetchTenents } = useGetData();
+  const { addtenants } = useAddData();
+  const { loading, tenants, tenantCreds, masterData, mergeTenantData } = useGetData();
+  const { modifyData } = useModifyData();
+  const { deleteData } = useDeleteData();
+  const { addTenentCreds } = useAddTenentCreds();
+  const { isOpen, onOpen, onClose } = useDisclosure()
+  const auth = useContext(AuthContext);
+  const { isLoggedIn, emailInitial } = auth; // Using properties from the auth context
+  const loggedInUserData = useLoggedInUserData(isLoggedIn, emailInitial);
   const toast = useToast();
   const formik = useFormik({
     initialValues: {
-      tenentName: "",
-      tenentContact: "",
-      tenentEmail: "",
-      tenentRoom: "",
-      tenentStay: "",
-      tenentRent: "",
+      tenantName: "",
+      tenantContact: "",
+      tenantEmail: "",
+      tenantRoom: "",
+      tenantStay: "",
+      tenantRent: "",
     },
     validate: (values) => {
       let errors = {};
-      if (!values.tenentName) {
-        errors.tenentName = "Tenent Name Is Missing or is Incorrect";
+      if (!values.tenantName) {
+        errors.tenantName = "tenant Name Is Missing or is Incorrect";
       }
-      if (!values.tenentContact) {
-        errors.tenentContact = "Tenent Contact Is Missing or is Incorrect";
-      } else if (!/^\d{10}$/.test(values.tenentContact)) {
-        errors.tenentContact =
+      if (!values.tenantContact) {
+        errors.tenantContact = "tenant Contact Is Missing or is Incorrect";
+      } else if (!/^\d{10}$/.test(values.tenantContact)) {
+        errors.tenantContact =
           "Contact number should be exactly 10 digits long";
       }
-      if (!values.tenentEmail) {
-        errors.tenentEmail = "Tenent Email Is Missing or is Incorrect";
-      } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values.tenentEmail)) {
-        errors.tenentEmail = "Invalid Email";
+      if (!values.tenantEmail) {
+        errors.tenantEmail = "tenant Email Is Missing or is Incorrect";
+      } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values.tenantEmail)) {
+        errors.tenantEmail = "Invalid Email";
       }
-      if (!values.tenentRoom) {
-        errors.tenentRoom = "Tenent Room Is Missing or is Incorrect";
+      if (!values.tenantRoom) {
+        errors.tenantRoom = "tenant Room Is Missing or is Incorrect";
       }
-      if (!values.tenentStay) {
-        errors.tenentStay = "Tenent Stay Duration Is Missing or is Incorrect";
+      if (!values.tenantStay) {
+        errors.tenantStay = "tenant Stay Duration Is Missing or is Incorrect";
       }
-      if (!values.tenentRent) {
-        errors.tenentRent = "Tenent Rent Amount Is Missing or is Incorrect";
+      if (!values.tenantRent) {
+        errors.tenantRent = "tenant Rent Amount Is Missing or is Incorrect";
       }
       return errors;
     },
     onSubmit: async (values) => {
       try {
-        const docId = await addTenents(values);
+        const docId = await addtenants(values);
         const examplePromise = new Promise((resolve, reject) => {
           if (docId) setTimeout(() => resolve(200), 3000);
           if (!docId) setTimeout(() => reject(200), 3000);
@@ -78,18 +90,18 @@ const Users = () => {
           toast.promise(examplePromise, {
             success: {
               title: "Congratulation",
-              description: "Tenent successfully added",
+              description: "tenant successfully added",
             },
             error: {
               title: "Unfortunatley",
               description: "Something wrong please try again after some time",
             },
-            loading: { title: "Please wait", description: "adding tenent" },
+            loading: { title: "Please wait", description: "adding tenant" },
           });
           // Optionally, you can reset the form after successful submission
           formik.resetForm();
         } else {
-          throw new Error("Failed to add tenent.");
+          throw new Error("Failed to add tenant.");
         }
       } catch (error) {
         toast({
@@ -103,88 +115,114 @@ const Users = () => {
     },
   });
 
-  const [isOpen, setIsOpen] = useState(false);
-  const [selectedTenent, setSelectedTenent] = useState(null);
-  const [editableFields, setEditableFields] = useState({});
 
-  const onClose = () => setIsOpen(false);
+  // State for managing modal and edited tenant
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editedTenant, setEditedTenant] = useState(null);
 
-  const handleEdit = (tenent) => {
-    setSelectedTenent(tenent);
-    setEditableFields({
-      ...editableFields,
-      [tenent.id]: true,
-    });
+  const handleEditClick = (tenant) => {
+    setEditedTenant(tenant);
+    setModalOpen(true);
   };
 
-  const handleSave = async (tenent) => {
+  const handleSave = async () => {
     try {
-      const docRef = db.collection("tenents").doc(tenent.id);
-      await docRef.update({
-        tenentName: tenent.tenentName,
-        tenentContact: tenent.tenentContact,
-        tenentEmail: tenent.tenentEmail,
-        tenentRoom: tenent.tenentRoom,
-        tenentStay: tenent.tenentStay,
-        tenentRent: tenent.tenentRent,
-      });
+      const { tenantName, tenantContact, tenantEmail, tenantRoom, tenantStay, tenantRent } = editedTenant;
+      const updatedData = {
+        tenantName,
+        tenantContact,
+        tenantEmail,
+        tenantRoom,
+        tenantStay,
+        tenantRent
+      };
+      await modifyData("tenants", editedTenant.id, updatedData);
+      setModalOpen(false);
       toast({
         title: "Success",
-        description: "Tenent data updated successfully.",
+        description: "Tenant data updated successfully.",
         status: "success",
-        duration: 3000,
+        duration: 5000,
         isClosable: true,
       });
-      setEditableFields({
-        ...editableFields,
-        [tenent.id]: false,
-      });
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000)
+
     } catch (error) {
+      console.error('Error updating tenant document:', error);
       toast({
         title: "Error",
-        description: "Failed to update tenent data.",
+        description: "An error occurred while updating the tenant document.",
         status: "error",
-        duration: 3000,
+        duration: 5000,
         isClosable: true,
       });
     }
   };
 
-  const handleDelete = async (tenent) => {
+  const handleDelete = async (collectionName, documentId) => {
     try {
-      await db.collection("tenents").doc(tenent.id).delete();
+      await deleteData(collectionName, documentId);
       toast({
         title: "Success",
-        description: "Tenent deleted successfully.",
+        description: "Tenant data deleted successfully.",
         status: "success",
-        duration: 3000,
+        duration: 5000,
         isClosable: true,
       });
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
     } catch (error) {
+      console.error('Error deleting tenant document:', error);
       toast({
         title: "Error",
-        description: "Failed to delete tenent.",
+        description: "An error occurred while deleting the tenant document.",
         status: "error",
-        duration: 3000,
+        duration: 5000,
         isClosable: true,
       });
     }
   };
 
-  const handleFieldChange = (tenent, field, e) => {
-    tenent[field] = e.target.textContent;
-    setEditableFields({
-      ...editableFields,
-      [tenent.id]: true,
-    });
+  // generate account
+  const [generatedCredentials, setGeneratedCredentials] = useState(null); 
+  const [copied, setCopied] = useState(false);
+  const handleGenerateAccounts = async (tenantEmail) => {
+    const result = await addTenentCreds(tenantEmail);
+    if (result && result.password !== 'Already exists') {
+      setGeneratedCredentials({ email: result.email, password: result.password });
+      onOpen();
+      toast({
+        title: "Account Generated",
+        description: `Account generated successfully for ${result.email}`,
+        status: "success",
+        duration: 5000,
+        isClosable: true,
+      });
+    } else if (result && result.password === 'Already exists') {
+      toast({
+        title: "Attention!!",
+        description: `Account already exists for ${result.email}`,
+        status: "warning",
+        duration: 5000,
+        isClosable: true,
+      });
+    } else {
+      // Show error toast if account generation fails
+      toast({
+        title: "Error",
+        description: "Failed to generate account.",
+        status: "error",
+        duration: 5000,
+        isClosable: true,
+      });
+    }
   };
-
-  const handleConfirmDelete = async () => {
-    if (!selectedTenent) return;
-    await handleDelete(selectedTenent);
-    setIsOpen(false);
-  };
-
+  const viewCreds = () => {
+    onOpen();
+  }
 
   return (
     <>
@@ -195,153 +233,115 @@ const Users = () => {
               background: "#E6F4F1",
             }}
           >
-            <Title>Tenents Info</Title>
+            <Title>tenants Info</Title>
           </Tab>
           <Tab
             _selected={{
               background: "#E6F4F1",
             }}
           >
-            <Title>Add Tenents</Title>
+            <Title>Add tenants</Title>
           </Tab>
         </TabList>
         <TabPanels>
           <TabPanel>
             <Title size={"lg"} customClass={"mb-8"}>
-              Total Tenents {tenents.length}
+              Total tenants {tenants.length}
             </Title>
             <Skeleton isLoaded={!loading}>
               <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Tenent Name
+                      <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-center">
+                        tenant Name
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Tenent Contact
+                      <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-center">
+                        tenant Contact
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Tenent Email
+                      <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-center">
+                        tenant Email
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Tenent Room
+                      <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-center">
+                        tenant Room
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Tenent Stay
+                      <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-center">
+                        tenant Stay
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Tenent Rent
+                      <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-center">
+                        tenant Rent
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-center">
                         Actions
                       </th>
                     </tr>
                   </thead>
 
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {tenents.map((t) => (
-                      <tr key={t.id}>
-                        <td
-                          className="px-6 py-4 whitespace-nowrap"
-                          contentEditable={editableFields[t.id]}
-                          onBlur={(e) => handleFieldChange(t, "tenentName", e)}
-                        >
-                          {t.tenentName}
-                        </td>
-                        <td
-                          className="px-6 py-4 whitespace-nowrap"
-                          contentEditable={editableFields[t.id]}
-                          onBlur={(e) =>
-                            handleFieldChange(t, "tenentContact", e)
-                          }
-                        >
-                          {t.tenentContact}
-                        </td>
-                        <td
-                          className="px-6 py-4 whitespace-nowrap"
-                          contentEditable={editableFields[t.id]}
-                          onBlur={(e) => handleFieldChange(t, "tenentEmail", e)}
-                        >
-                          {t.tenentEmail}
-                        </td>
-                        <td
-                          className="px-6 py-4 whitespace-nowrap"
-                          contentEditable={editableFields[t.id]}
-                          onBlur={(e) => handleFieldChange(t, "tenentRoom", e)}
-                        >
-                          {t.tenentRoom}
-                        </td>
-                        <td
-                          className="px-6 py-4 whitespace-nowrap"
-                          contentEditable={editableFields[t.id]}
-                          onBlur={(e) => handleFieldChange(t, "tenentStay", e)}
-                        >
-                          {t.tenentStay}
-                        </td>
-                        <td
-                          className="px-6 py-4 whitespace-nowrap"
-                          contentEditable={editableFields[t.id]}
-                          onBlur={(e) => handleFieldChange(t, "tenentRent", e)}
-                        >
-                          {t.tenentRent}
-                        </td>
-                        <td>
-                          {!editableFields[t.id] ? (
+                    {tenants.map((tenant) => (
+                      <tr key={tenant.id}>
+                        <td className="p-3 whitespace-nowrap border-b text-center font-bold">{tenant.tenantName}</td>
+                        <td className="p-3 whitespace-nowrap border-b text-center">{tenant.tenantContact}</td>
+                        <td className="p-3 whitespace-nowrap border-b text-center">{tenant.tenantEmail}</td>
+                        <td className="p-3 whitespace-nowrap border-b text-center">{tenant.tenantRoom}</td>
+                        <td className="p-3 whitespace-nowrap border-b text-center">{tenant.tenantStay}</td>
+                        <td className="p-3 whitespace-nowrap border-b text-center">{tenant.tenantRent}</td>
+                        <td className="p-3 whitespace-nowrap">
+                          <div className="flex gap-3">
                             <IconButton
-                              icon={
-                                <i className="fa-regular fa-pen-to-square"></i>
-                              }
-                              onClick={() => handleEdit(t)}
-                              mr={2}
-                              colorScheme="blue"
+                              aria-label="Edit"
+                              icon={<i className="fa-regular fa-pencil-alt"></i>}
+                              onClick={() => handleEditClick(tenant)}
                             />
-                          ) : (
                             <IconButton
-                              icon={
-                                <i className="fa-regular fa-floppy-disk"></i>
-                              }
-                              onClick={() => handleSave(t)}
-                              mr={2}
-                              colorScheme="green"
+                              aria-label="Delete"
+                              icon={<i className="fa-regular fa-trash-alt"></i>}
+                              onClick={() => handleDelete("tenants", tenant.id)}
                             />
-                          )}
-                          <IconButton
-                            icon={<i className="fa-solid fa-trash"></i>}
-                            onClick={() => handleDelete(t)}
-                            colorScheme="red"
-                          />
+                            <IconButton
+                              aria-label="Generate Accounts"
+                              icon={<i className="fa-regular fa-user-plus" />}
+                              onClick={() => {
+                                handleGenerateAccounts(tenant.tenantEmail)
+                                mergeTenantData()
+                              }}
+                            />
+                            <IconButton
+                              aria-label="View Account"
+                              icon={<i className="fa-regular fa-eye" />}
+                              onClick={viewCreds}
+                            />
+                          </div>
                         </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
-              <AlertDialog isOpen={isOpen} onClose={onClose}>
-                <AlertDialogOverlay>
-                  <AlertDialogContent>
-                    <AlertDialogHeader fontSize="lg" fontWeight="bold">
-                      Delete Tenent
-                    </AlertDialogHeader>
-
-                    <AlertDialogBody>
-                      Are you sure? You can't undo this action afterwards.
-                    </AlertDialogBody>
-
-                    <AlertDialogFooter>
-                      <Button onClick={onClose}>Cancel</Button>
-                      <Button
-                        colorScheme="red"
-                        onClick={handleConfirmDelete}
-                        ml={3}
-                      >
-                        Delete
-                      </Button>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialogOverlay>
-              </AlertDialog>
             </Skeleton>
+            <Modal isOpen={isOpen} onClose={onClose}>
+              <ModalOverlay />
+              <ModalContent>
+                <ModalHeader>Generated Credentials</ModalHeader>
+                <ModalCloseButton />
+                <ModalBody>
+                  <p>Email: {generatedCredentials ? generatedCredentials.email : ""}</p>
+                  <p>Password: {generatedCredentials ? generatedCredentials.password : ""}</p>
+                </ModalBody>
+                <ModalFooter>
+                  <Button colorScheme="blue" mr={3} onClick={onClose}>
+                    Close
+                  </Button>
+                </ModalFooter>
+              </ModalContent>
+            </Modal>
+
+            {loggedInUserData ? (
+              <div>
+                <p>Name: {loggedInUserData.tenantName.split(' ').map(word => word.charAt(0).toUpperCase())}</p>
+                <p>Email: {loggedInUserData.email}</p>
+              </div>
+            ) : 'asdwd'}
           </TabPanel>
           <TabPanel>
             <form className="" onSubmit={formik.handleSubmit}>
@@ -349,43 +349,43 @@ const Users = () => {
                 <div className="flex-1">
                   <div className="name flex flex-col w-full mb-6">
                     <label className="font-medium mb-2 text-sm">
-                      <i className="fa-regular fa-user"></i> Tenent Name{" "}
+                      <i className="fa-regular fa-user"></i> tenant Name{" "}
                     </label>
                     <input
                       type="text"
                       placeholder="Enter name"
-                      name="tenentName"
+                      name="tenantName"
                       autoFocus
                       className="border border-gray-400 focus:border-secondary focus:border-2 rounded-lg p-3 max-w-full"
                       onChange={formik.handleChange}
                       onBlur={formik.handleBlur}
-                      value={formik.values.tenentName}
+                      value={formik.values.tenantName}
                     />
-                    {formik.touched.tenentName && formik.errors.tenentName ? (
+                    {formik.touched.tenantName && formik.errors.tenantName ? (
                       <div className="text-red-500 text-sm font-semibold">
-                        {formik.errors.tenentName}
+                        {formik.errors.tenantName}
                       </div>
                     ) : null}
                   </div>
                   <div className="contact flex flex-col w-full mb-6">
                     <label className="font-medium mb-2 text-sm">
-                      <i className="fa-regular fa-phone"></i> Tenent Contact
+                      <i className="fa-regular fa-phone"></i> tenant Contact
                       number
                     </label>
                     <input
                       type="number"
-                      name="tenentContact"
+                      name="tenantContact"
                       placeholder="Enter Room Number"
                       autoFocus
                       className="border border-gray-400 focus:border-secondary focus:border-2 rounded-lg p-3 max-w-full"
                       onChange={formik.handleChange}
                       onBlur={formik.handleBlur}
-                      value={formik.values.tenentContact}
+                      value={formik.values.tenantContact}
                     />
-                    {formik.touched.tenentContact &&
-                    formik.errors.tenentContact ? (
+                    {formik.touched.tenantContact &&
+                      formik.errors.tenantContact ? (
                       <div className="text-red-500 text-sm font-semibold">
-                        {formik.errors.tenentContact}
+                        {formik.errors.tenantContact}
                       </div>
                     ) : null}
                   </div>
@@ -400,16 +400,16 @@ const Users = () => {
                     <input
                       type="text"
                       placeholder="Enter stay duration"
-                      name="tenentStay"
+                      name="tenantStay"
                       autoFocus
                       className="border border-gray-400 focus:border-secondary focus:border-2 rounded-lg p-3 max-w-full"
                       onChange={formik.handleChange}
                       onBlur={formik.handleBlur}
-                      value={formik.values.tenentStay}
+                      value={formik.values.tenantStay}
                     />
-                    {formik.touched.tenentStay && formik.errors.tenentStay ? (
+                    {formik.touched.tenantStay && formik.errors.tenantStay ? (
                       <div className="text-red-500 text-sm font-semibold">
-                        {formik.errors.tenentStay}
+                        {formik.errors.tenantStay}
                       </div>
                     ) : null}
                   </div>
@@ -417,42 +417,42 @@ const Users = () => {
                 <div className="flex-1">
                   <div className="email flex flex-col w-full mb-6">
                     <label className="font-medium mb-2 text-sm">
-                      <i className="fa-regular fa-envelope"></i> Tenent Email
+                      <i className="fa-regular fa-envelope"></i> tenant Email
                     </label>
                     <input
                       placeholder="Enter Email"
                       type="email"
-                      name="tenentEmail"
+                      name="tenantEmail"
                       autoFocus
                       className="border border-gray-400 focus:border-secondary focus:border-2 rounded-lg p-3 max-w-full"
                       onChange={formik.handleChange}
                       onBlur={formik.handleBlur}
-                      value={formik.values.tenentEmail}
+                      value={formik.values.tenantEmail}
                     />
-                    {formik.touched.tenentEmail && formik.errors.tenentEmail ? (
+                    {formik.touched.tenantEmail && formik.errors.tenantEmail ? (
                       <div className="text-red-500 text-sm font-semibold">
-                        {formik.errors.tenentEmail}
+                        {formik.errors.tenantEmail}
                       </div>
                     ) : null}
                   </div>
-                  <div className="romm-number flex flex-col w-full mb-6">
+                  <div className="room-number flex flex-col w-full mb-6">
                     <label className="font-medium mb-2 text-sm">
-                      <i className="fa-regular fa-person-booth"></i> Tenent Room
+                      <i className="fa-regular fa-person-booth"></i> tenant Room
                       number
                     </label>
                     <input
                       type="number"
                       placeholder="Enter Room Number"
-                      name="tenentRoom"
+                      name="tenantRoom"
                       autoFocus
                       className="border border-gray-400 focus:border-secondary focus:border-2 rounded-lg p-3 max-w-full"
                       onChange={formik.handleChange}
                       onBlur={formik.handleBlur}
-                      value={formik.values.tenentRoom}
+                      value={formik.values.tenantRoom}
                     />
-                    {formik.touched.tenentRoom && formik.errors.tenentRoom ? (
+                    {formik.touched.tenantRoom && formik.errors.tenantRoom ? (
                       <div className="text-red-500 text-sm font-semibold">
-                        {formik.errors.tenentRoom}
+                        {formik.errors.tenantRoom}
                       </div>
                     ) : null}
                   </div>
@@ -463,17 +463,17 @@ const Users = () => {
                     <input
                       type="number"
                       placeholder="Enter Rent"
-                      name="tenentRent"
+                      name="tenantRent"
                       min={0}
                       autoFocus
                       className="border border-gray-400 focus:border-secondary focus:border-2 rounded-lg p-3 max-w-full"
                       onChange={formik.handleChange}
                       onBlur={formik.handleBlur}
-                      value={formik.values.tenentRent}
+                      value={formik.values.tenantRent}
                     />
-                    {formik.touched.tenentRent && formik.errors.tenentRent ? (
+                    {formik.touched.tenantRent && formik.errors.tenantRent ? (
                       <div className="text-red-500 text-sm font-semibold">
-                        {formik.errors.tenentRent}
+                        {formik.errors.tenantRent}
                       </div>
                     ) : null}
                   </div>
@@ -489,6 +489,77 @@ const Users = () => {
           </TabPanel>
         </TabPanels>
       </Tabs>
+      <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)}>
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>Edit Tenant</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody>
+            <FormControl>
+              <FormLabel>Tenant Name</FormLabel>
+              <Input
+                type="text"
+                name="tenantName"
+                value={editedTenant?.tenantName || ""}
+                onChange={(e) => setEditedTenant({ ...editedTenant, tenantName: e.target.value })}
+              />
+            </FormControl>
+            <FormControl mt={4}>
+              <FormLabel>Tenant Contact</FormLabel>
+              <Input
+                type="text"
+                name="tenantContact"
+                value={editedTenant?.tenantContact || ""}
+                onChange={(e) => setEditedTenant({ ...editedTenant, tenantContact: e.target.value })}
+              />
+            </FormControl>
+            <FormControl mt={4}>
+              <FormLabel>Tenant Email</FormLabel>
+              <Input
+                type="email"
+                name="tenantEmail"
+                value={editedTenant?.tenantEmail || ""}
+                onChange={(e) => setEditedTenant({ ...editedTenant, tenantEmail: e.target.value })}
+              />
+            </FormControl>
+            <FormControl mt={4}>
+              <FormLabel>Tenant Room</FormLabel>
+              <Input
+                type="text"
+                name="tenantRoom"
+                value={editedTenant?.tenantRoom || ""}
+                onChange={(e) => setEditedTenant({ ...editedTenant, tenantRoom: e.target.value })}
+              />
+            </FormControl>
+            <FormControl mt={4}>
+              <FormLabel>Tenant Stay</FormLabel>
+              <Input
+                type="text"
+                name="tenantStay"
+                value={editedTenant?.tenantStay || ""}
+                onChange={(e) => setEditedTenant({ ...editedTenant, tenantStay: e.target.value })}
+              />
+            </FormControl>
+            <FormControl mt={4}>
+              <FormLabel>Tenant Rent</FormLabel>
+              <Input
+                type="number"
+                name="tenantRent"
+                value={editedTenant?.tenantRent || ""}
+                onChange={(e) => setEditedTenant({ ...editedTenant, tenantRent: e.target.value })}
+              />
+            </FormControl>
+          </ModalBody>
+
+
+          <ModalFooter>
+            <Button colorScheme="blue" mr={3} onClick={handleSave}>
+              Save
+            </Button>
+            <Button onClick={() => setModalOpen(false)}>Cancel</Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
     </>
   );
 };

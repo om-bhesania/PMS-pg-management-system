@@ -1,8 +1,15 @@
+import { useContext } from "react";
 import { Card, Divider, AbsoluteCenter, Box, Spinner } from "@chakra-ui/react";
 import Title from "./../components/utils/Title";
 import useGetData from "../hooks/getData";
+import useLoggedInUserData from "../hooks/useLoggedInUserData";
+import { AuthContext } from "../components/authProvider";
+
 const Dashboard = () => {
-  const { loading, error, tenents, fetchTenents } = useGetData();
+  const auth = useContext(AuthContext);
+  const { loading, error, tenants, fetchtenants } = useGetData();
+  const { isLoggedIn, emailInitial } = auth; // Using properties from the auth context
+  const loggedInUserData = useLoggedInUserData(isLoggedIn, emailInitial);
   return (
     <>
       <section className="dashboard">
@@ -50,7 +57,7 @@ const Dashboard = () => {
               </Title>
             </div>
             <div className="flex-1 rounded-lg flex flex-col items-center p-6 px-10 shadow-lg bg-bgRed  ">
-              <Title size={"lg"}>Total Tenents</Title>
+              <Title size={"lg"}>Total tenants</Title>
               <Title
                 size={"custom"}
                 customClass={"font-secondary"}
@@ -69,14 +76,21 @@ const Dashboard = () => {
                     Something went wrong
                   </Title>
                 ) : (
-                  tenents.length
+                  tenants.length
                 )}
               </Title>
             </div>
           </div>
           <div className="latest-info flex flex-col">
             <div className="my-10" />
-            <div className="flex p-6 rounded-lg outline-2 outline-primary outline"></div>
+            <div className="flex p-6 rounded-lg outline-2 outline-primary outline">
+              {loggedInUserData ? (
+                <div>
+                  <p>Name: {loggedInUserData.tenantName.split(' ').map(word => word.charAt(0).toUpperCase())}</p>
+                  <p>Email: {loggedInUserData.email}</p>
+                </div>
+              ) : "asdwd"}
+            </div>
           </div>
         </div>
       </section>

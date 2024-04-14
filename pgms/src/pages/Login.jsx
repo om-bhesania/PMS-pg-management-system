@@ -4,11 +4,20 @@ import { Input, Button } from "@chakra-ui/react";
 import { useToast } from "@chakra-ui/react";
 import { v4 as uuidv4 } from "uuid";
 import Title from './../components/utils/Title';
-import { useNavigate } from 'react-router-dom';
+import { useState } from "react";
+import CryptoJS from 'crypto-js';
+import useGetData from './../hooks/getData';
+import { collection, getDocs, query, where } from 'firebase/firestore';
+import { db } from '../firebase/firebase';
+import useLoggedInUserData from "../hooks/useLoggedInUserData";
 
 const Login = () => {
-    const nav = useNavigate();
-
+  const { tenantCreds } = useGetData();
+  const [emailInitial, setEmailInitial] = useState('');
+  const [isLoggedIn, setIsLoggedIn] = useState();
+  
+  const loggedInUserData = useLoggedInUserData(isLoggedIn, emailInitial);
+  console.log(loggedInUserData)
   const validationSchema = Yup.object().shape({
     email: Yup.string().email("Invalid email").required("Email is required"),
     password: Yup.string().required("Password is required"),
@@ -18,40 +27,73 @@ const Login = () => {
     email: "",
     password: "",
   };
-  const generateToken = () => {
-    return uuidv4();
-  };
-  const handleSubmit = (values) => {
+
+  const handleSubmit = async (values) => {
     const { email, password } = values;
-    const token = generateToken();
-    values.email = "admin@gmail.com";
-    values.password = "admin@gmail.com";
-    
-    
-    if (values.email != email || values.password != password) {
+
+    try {
+      // Fetch tenant credentials from the database
+      const tenantCredsQuery = query(collection(db, 'tenantCreds'), where('email', '==', email));
+      const tenantCredsSnapshot = await getDocs(tenantCredsQuery);
+
+      // Check if tenant credentials exist
+      if (!tenantCredsSnapshot.empty) {
+        tenantCredsSnapshot.forEach(doc => {
+          const tenantData = doc.data();
+          const encryptedPassword = tenantData.password;
+          setIsLoggedIn(true);
+          setEmailInitial(email.toLowerCase());
+          // Decrypt password from the database
+          const decryptedPassword = CryptoJS.AES.decrypt(encryptedPassword, 'this@is@secret@key__').toString(CryptoJS.enc.Utf8);
+          console.log(decryptedPassword)
+          if (decryptedPassword === password) {
+
+            window.localStorage.setItem("token", true);
+            window.localStorage.setItem("role", tenantData.role);
+
+            // Show success message
+            toast({
+              title: "Login Successful.",
+              status: "success",
+              position: "top-right",
+              duration: 3000,
+              isClosable: true,
+            });
+          } else {
+            // Show error message for incorrect password
+            toast({
+              title: "Incorrect Password",
+              status: "error",
+              position: "top-right",
+              duration: 3000,
+              isClosable: true,
+            });
+          }
+        });
+      } else {
+        // Show error message for invalid email
+        toast({
+          title: "Invalid Email",
+          status: "error",
+          position: "top-right",
+          duration: 3000,
+          isClosable: true,
+        });
+      }
+    } catch (error) {
+      // Show error message for database fetch error
       toast({
-        title: "Incorrect Email or Password",
+        title: "Error",
+        description: "Failed to fetch tenant credentials: " + error.message,
         status: "error",
-        position: "top-right",
-        duration: 3000,
-        isClosable: true,
-      });
-    } else {
-      window.localStorage.setItem("token", token);
-      window.localStorage.setItem("role", "guest");
-      nav("/dashboard");
-      setTimeout(() => {
-        window.location.reload();
-      }, 3000);
-      toast({
-        title: "Login Successful.",
-        status: "success",
         position: "top-right",
         duration: 3000,
         isClosable: true,
       });
     }
   };
+
+
 
   const toast = useToast();
 
@@ -108,6 +150,12 @@ const Login = () => {
             </Button>
           </Form>
         </Formik>
+        {loggedInUserData && (
+          <div>
+            <p>Name: {loggedInUserData.tenantName.split(' ').map(word => word.charAt(0).toUpperCase())}</p>
+            <p>Email: {loggedInUserData.email}</p>
+          </div>
+        )}
       </div>
     </>
   );

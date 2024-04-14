@@ -25,9 +25,8 @@ const Sidebar = ({
   return (
     <section className="font-primary">
       <div
-        className={`flex flex-col md:flex-row ${
-          customClass ? customClass : ""
-        } px-[16px] `}
+        className={`flex flex-col md:flex-row ${customClass ? customClass : ""
+          } px-[16px] `}
       >
         <div className="w-full md:w-64 lg:w-80 ">
           <div className="flex items-center justify-start mt-5 text-primary text-4xl font-bold">
@@ -51,7 +50,7 @@ const Sidebar = ({
                   className="py-2 px-4 rounded flex justify-between items-center w-full hover:bg-primary hover:text-white transition duration-300 font-bold"
                   onClick={toggleDropdown}
                 >
-                  Tenents
+                  tenants
                   {!isDropdownOpen ? (
                     <img
                       src="https://img.icons8.com/ios/50/000000/expand-arrow--v1.png"
@@ -82,17 +81,11 @@ const Sidebar = ({
                 )}
               </div>
             </ul>
-
-            {isLoggedIn ? (
-              <Logout />
-            ) : (
-              <Button label={"Login"} url={"/login"} variant={"primary"} />
-            )}
           </nav>
         </div>
 
         {/* Content */}
-        <div className="container">
+        <div className="container ms-0 max-w-[1460px]">
           <div className="md:mt-5 md:ms-10">{children}</div>
         </div>
       </div>
@@ -104,18 +97,16 @@ export default Sidebar;
 
 export const Logout = () => {
   return (
+
     <button
-      className="py-2 px-6 border-primary text-secondary border-2  hover:bg-primary hover:text-white ease-in-out rounded text-lg text-center transition duration-300 font-bold"
+      className="flex items-center justify-center p-3 rounded-lg text-lg hover:shadow-2xl hover:shadow-black shadow-lg bg-primary text-white active:scale-[0.8] ease-in-out duration-300"
       onClick={() => {
         window.localStorage.clear();
         window.location.href = "/";
         window.location.reload();
       }}
     >
-      <span className="inline-block me-3 ">Logout</span>
-      <span className="inline-block">
-        <i className="fa-regular fa-right-from-bracket"></i>
-      </span>
+      <i className="fa-regular fa-right-from-bracket"></i>
     </button>
   );
 };

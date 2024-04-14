@@ -8,7 +8,7 @@ const addData = () => {
       return docRef.id;
     } catch (e) {
       console.error("Error adding document: ", e);
-      return null; 
+      throw e;
     }
   };
 
