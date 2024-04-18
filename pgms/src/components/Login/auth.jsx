@@ -1,16 +1,22 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-const ProtectedRoute = ({component: Component}) => {
+const ProtectedRoute = ({ component: Component }) => {
   const [LoggedIn, setLoggedIn] = useState(false);
-  const navigate = useNavigate();
+  const [Role, setRole] = useState("");
 
-  useEffect(() => {
+  const getRole = () => {
+    const currentRole = sessionStorage.getItem("role");
+    setRole(currentRole);
+  };
+
+  const navigate = useNavigate();
+  useEffect(() => { 
+    getRole();
     let login = localStorage.getItem("token");
     if (!login) {
       navigate("/login");
     } else {
-      navigate("/dashboard");
       setLoggedIn(true);
     }
   }, []);

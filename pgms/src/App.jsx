@@ -13,19 +13,23 @@ import Button from "./components/utils/Button";
 import Breadcrumbs from "./components/utils/breadcrumbs";
 import useGetData from "./hooks/getData";
 import { AuthProvider } from "./components/authProvider";
-
+import OwnerRoute from "./components/Login/ownerAuth";
 
 function App() {
-  const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem("token"));
-  const [currentUser, setCurrentUser] = useState(
-    localStorage.getItem("role")
-  );
+  const [isLoggedIn, setIsLoggedIn] = useState(localStorage.getItem("token"));
+  const [currentUser, setCurrentUser] = useState("");
+
+  const getCurrentUserInfo = () => {
+    const CurrentUserInfo = sessionStorage.getItem("email");
+    setCurrentUser(CurrentUserInfo);
+  };
   const { email, password } = Login();
-  const { tenantCreds, masterData } = useGetData();
+  const { tenantCreds, masterData, Role } = useGetData();
   useEffect(() => {
     if (isLoggedIn) {
-      setCurrentUser(localStorage.getItem("role"));
+      setCurrentUser(sessionStorage.getItem("role"));
     }
+    getCurrentUserInfo();
   }, [isLoggedIn]);
 
   return (
@@ -33,7 +37,7 @@ function App() {
       <AuthProvider>
         <BrowserRouter>
           <Sidebar>
-            <div className="flex flex-col gap-1 mb-5">
+            <div className="flex flex-col gap-1 mb-5  bg-slate-200 p-4 rounded-xl">
               <div className="flex justify-between items-start">
                 <div className="flex flex-col">
                   <Title size={"xl"}>Pg Management Dashboard</Title>
@@ -43,26 +47,41 @@ function App() {
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
-                  <button className="flex items-center justify-center p-3 rounded-lg text-lg shadow-lg bg-primary text-white hover:shadow-2xl hover:shadow-black active:scale-[0.8] ease-in-out duration-300">
-                    <i className="fa-sharp fa-regular fa-bell "></i>
-                  </button>
-                  {isLoggedIn ? (
-                    <Logout />
-                  ) : (
-                    <Button label={"Login"} url={"/login"} variant={"primary"} />
-                  )}
                   {isLoggedIn ? (
                     <>
-                      {masterData.map((t, id) => (
-                        <div key={id}>
-                          {t.tenantName.split().map(tenantName => tenantName.charAt(0).toUpperCase())}
-                        </div>
-                      ))}
+                      <button className="flex items-center justify-center p-3 rounded-lg text-lg shadow-lg bg-primary text-white hover:shadow-2xl hover:shadow-black active:scale-[0.8] ease-in-out duration-300">
+                        <i className="fa-sharp fa-regular fa-bell "></i>
+                      </button>
+                      <Logout />
+                      {currentUser ? (
+                        <>
+                          <div
+                            className="flex items-center justify-center cursor-pointer p-3 rounded-lg text-lg hover:shadow-2xl hover:shadow-black shadow-lg bg-transparent border-2 border-primary h-[42px] w-[42px] text-primary active:scale-[0.8] ease-in-out duration-300"
+                            onClick={() => {
+                              window.localStorage.clear();
+                              window.location.href = "/";
+                              window.location.reload();
+                              window.sessionStorage.clear();
+                            }}
+                          >
+                            {currentUser
+                              .split(" ")
+                              .map((word) => word.charAt(0).toUpperCase())}
+                          </div>
+                        </>
+                      ) : null}
                     </>
-                  ) : null}
+                  ) : (
+                    <>
+                      <Button
+                        label={"Login"}
+                        url={"/login"}
+                        variant={"primary"}
+                      />
+                    </>
+                  )}
                 </div>
               </div>
-              <Breadcrumbs />
             </div>
             <Routes>
               <Route
@@ -73,22 +92,28 @@ function App() {
                 path="/dashboard"
                 element={<ProtectedRoute component={Dashboard} />}
               />
-              <Route
-                path="/users"
-                element={<ProtectedRoute component={Users} />}
-              />
-              <Route
-                path="/electricitybill"
-                element={<ProtectedRoute component={Electricitybill} />}
-              />
-              <Route
-                path="/rentdue"
-                element={<ProtectedRoute component={Rentdue} />}
-              />
-              <Route
-                path="/otherexpenses"
-                element={<ProtectedRoute component={Otherexpenses} />}
-              />
+              {Role && Role === "user" ? null : (
+                <>
+                  <Route
+                    path="/users"
+                    element={<ProtectedRoute component={Users} />}
+                  />
+                  {/* <Route path="/users" element={<Users />} /> */}
+                  <Route
+                    path="/electricitybill"
+                    element={<ProtectedRoute component={Electricitybill} />}
+                  />
+                  <Route
+                    path="/rentdue"
+                    element={<ProtectedRoute component={Rentdue} />}
+                  />
+                  <Route
+                    path="/otherexpenses"
+                    element={<ProtectedRoute component={Otherexpenses} />}
+                  />
+                </>
+              )}
+
               <Route path="/login" element={<Login />} />
             </Routes>
           </Sidebar>

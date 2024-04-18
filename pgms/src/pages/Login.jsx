@@ -3,21 +3,22 @@ import * as Yup from "yup";
 import { Input, Button } from "@chakra-ui/react";
 import { useToast } from "@chakra-ui/react";
 import { v4 as uuidv4 } from "uuid";
-import Title from './../components/utils/Title';
-import { useState } from "react";
-import CryptoJS from 'crypto-js';
-import useGetData from './../hooks/getData';
-import { collection, getDocs, query, where } from 'firebase/firestore';
-import { db } from '../firebase/firebase';
+import Title from "./../components/utils/Title";
+import { useEffect, useState } from "react";
+import CryptoJS from "crypto-js";
+import useGetData from "./../hooks/getData";
+import { collection, getDocs, query, where } from "firebase/firestore";
+import { db } from "../firebase/firebase";
 import useLoggedInUserData from "../hooks/useLoggedInUserData";
+import { useAuth } from "../components/authProvider";
 
 const Login = () => {
-  const { tenantCreds } = useGetData();
-  const [emailInitial, setEmailInitial] = useState('');
+  const { tenantCreds, Role } = useGetData();
+  const [emailInitial, setEmailInitial] = useState("");
   const [isLoggedIn, setIsLoggedIn] = useState();
-  
+  const [masterData, setMasterData] = useState();
+  const { login } = useAuth();
   const loggedInUserData = useLoggedInUserData(isLoggedIn, emailInitial);
-  console.log(loggedInUserData)
   const validationSchema = Yup.object().shape({
     email: Yup.string().email("Invalid email").required("Email is required"),
     password: Yup.string().required("Password is required"),
@@ -33,21 +34,36 @@ const Login = () => {
 
     try {
       // Fetch tenant credentials from the database
-      const tenantCredsQuery = query(collection(db, 'tenantCreds'), where('email', '==', email));
+      const tenantCredsQuery = query(
+        collection(db, "tenantCreds"),
+        where("email", "==", email)
+      );
       const tenantCredsSnapshot = await getDocs(tenantCredsQuery);
 
       // Check if tenant credentials exist
       if (!tenantCredsSnapshot.empty) {
-        tenantCredsSnapshot.forEach(doc => {
+        tenantCredsSnapshot.forEach((doc) => {
           const tenantData = doc.data();
           const encryptedPassword = tenantData.password;
           setIsLoggedIn(true);
           setEmailInitial(email.toLowerCase());
+          if (tenantData.email) {
+            sessionStorage.setItem("email", email);
+            sessionStorage.setItem("role", tenantData.role);
+            sessionStorage.setItem("data", JSON.stringify(tenantData));
+            setTimeout(() => {
+              sessionStorage.clear();
+            }, 60 * 60 * 1000);
+          }
+          window.location.reload();
+          window.location.href = '/';
           // Decrypt password from the database
-          const decryptedPassword = CryptoJS.AES.decrypt(encryptedPassword, 'this@is@secret@key__').toString(CryptoJS.enc.Utf8);
-          console.log(decryptedPassword)
+          const decryptedPassword = CryptoJS.AES.decrypt(
+            encryptedPassword,
+            "this@is@secret@key__"
+          ).toString(CryptoJS.enc.Utf8);
+          // window.location.href = "/dashboard";
           if (decryptedPassword === password) {
-
             window.localStorage.setItem("token", true);
             window.localStorage.setItem("role", tenantData.role);
 
@@ -92,8 +108,6 @@ const Login = () => {
       });
     }
   };
-
-
 
   const toast = useToast();
 
@@ -152,7 +166,12 @@ const Login = () => {
         </Formik>
         {loggedInUserData && (
           <div>
-            <p>Name: {loggedInUserData.tenantName.split(' ').map(word => word.charAt(0).toUpperCase())}</p>
+            <p>
+              Name:{" "}
+              {loggedInUserData.tenantName
+                .split(" ")
+                .map((word) => word.charAt(0).toUpperCase())}
+            </p>
             <p>Email: {loggedInUserData.email}</p>
           </div>
         )}

@@ -8,6 +8,7 @@ const useGetData = () => {
   const [tenants, setTenants] = useState([]);
   const [tenantCreds, setTenantCreds] = useState([]);
   const [masterData, setMasterData] = useState([]);
+  const [Role, setRole] = useState([]);
   const [masterDatabase, setMasterDatabase] = useState([]);
 
   const fetchTenants = async () => {
@@ -53,7 +54,9 @@ const useGetData = () => {
     setError(null);
     try {
       if (masterData.length === 0) {
-        const querySnapshot = await getDocs(collection(db, "MasterTenantsData"));
+        const querySnapshot = await getDocs(
+          collection(db, "MasterTenantsData")
+        );
         const data = querySnapshot.docs.map((doc) => ({
           id: doc.id,
           ...doc.data(),
@@ -67,7 +70,6 @@ const useGetData = () => {
     }
   };
 
-
   const mergeTenantData = async () => {
     try {
       const tenantsQuerySnapshot = await getDocs(collection(db, "tenants"));
@@ -78,23 +80,36 @@ const useGetData = () => {
         const tenantData = tenantDoc.data();
         const tenantEmail = tenantData.tenantEmail;
 
-        const matchingTenantCredsQuerySnapshot = await getDocs(query(collection(db, "tenantCreds"), where("email", "==", tenantEmail)));
+        const matchingTenantCredsQuerySnapshot = await getDocs(
+          query(
+            collection(db, "tenantCreds"),
+            where("email", "==", tenantEmail)
+          )
+        );
         if (!matchingTenantCredsQuerySnapshot.empty) {
-          const matchingTenantCredsDoc = matchingTenantCredsQuerySnapshot.docs[0];
+          const matchingTenantCredsDoc =
+            matchingTenantCredsQuerySnapshot.docs[0];
           const tenantCredsData = matchingTenantCredsDoc.data();
 
           const masterTenantData = {
             ...tenantData,
-            ...tenantCredsData
+            ...tenantCredsData,
           };
 
           // Check if the document already exists in MasterTenantsData collection
-          const masterDataQuerySnapshot = await getDocs(query(collection(db, "MasterTenantsData"), where("tenantEmail", "==", tenantEmail)));
+          const masterDataQuerySnapshot = await getDocs(
+            query(
+              collection(db, "MasterTenantsData"),
+              where("tenantEmail", "==", tenantEmail)
+            )
+          );
           if (masterDataQuerySnapshot.empty) {
             // If not found, add it to the collection
             await addDoc(collection(db, "MasterTenantsData"), masterTenantData);
           } else {
-            console.log(`Document for ${tenantEmail} already exists in MasterTenantsData.`);
+            console.log(
+              `Document for ${tenantEmail} already exists in MasterTenantsData.`
+            );
           }
 
           masterDatabaseData.push(masterTenantData);
@@ -106,19 +121,30 @@ const useGetData = () => {
     } catch (error) {
       console.error("Error merging tenant data:", error);
     }
-
   };
 
-
+  const fetchCurrentUserDetails = () => {
+    const Role = sessionStorage.getItem("role");
+    setRole(Role);
+  };
   useEffect(() => {
     fetchTenants();
     fetchTenantCreds();
     fetchMasterData();
-    console.log(masterData);
+    fetchCurrentUserDetails();
   }, []);
 
-
-  return { loading, error, tenants, tenantCreds, masterData, fetchMasterData, fetchTenants, mergeTenantData };
+  return {
+    loading,
+    error,
+    tenants,
+    Role,
+    tenantCreds,
+    masterData,
+    fetchMasterData,
+    fetchTenants,
+    mergeTenantData,
+  };
 };
 
-export default useGetData; 
+export default useGetData;

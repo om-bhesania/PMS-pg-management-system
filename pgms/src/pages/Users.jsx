@@ -27,21 +27,21 @@ import { useFormik } from "formik";
 import useAddData from "../hooks/addData";
 import useGetData from "../hooks/getData";
 import { useContext, useState } from "react";
-import useModifyData from '../hooks/modifyData';
+import useModifyData from "../hooks/modifyData";
 import useDeleteData from "../hooks/deleteData";
 import useAddTenentCreds from "../hooks/addTenent";
 import useLoggedInUserData from "../hooks/useLoggedInUserData";
-import { AuthContext } from "../components/authProvider";
+import Breadcrumbs from "../components/utils/breadcrumbs";
+import { Firestore, collection, getDocs } from "firebase/firestore";
+import { db } from "../firebase/firebase";
 const Users = () => {
   const { addtenants } = useAddData();
-  const { loading, tenants, tenantCreds, masterData, mergeTenantData } = useGetData();
+  const { loading, tenants, tenantCreds, error, masterData, mergeTenantData } =
+    useGetData();
   const { modifyData } = useModifyData();
   const { deleteData } = useDeleteData();
   const { addTenentCreds } = useAddTenentCreds();
-  const { isOpen, onOpen, onClose } = useDisclosure()
-  const auth = useContext(AuthContext);
-  const { isLoggedIn, emailInitial } = auth; // Using properties from the auth context
-  const loggedInUserData = useLoggedInUserData(isLoggedIn, emailInitial);
+  const { isOpen, onOpen, onClose } = useDisclosure();
   const toast = useToast();
   const formik = useFormik({
     initialValues: {
@@ -115,7 +115,6 @@ const Users = () => {
     },
   });
 
-
   // State for managing modal and edited tenant
   const [modalOpen, setModalOpen] = useState(false);
   const [editedTenant, setEditedTenant] = useState(null);
@@ -127,14 +126,21 @@ const Users = () => {
 
   const handleSave = async () => {
     try {
-      const { tenantName, tenantContact, tenantEmail, tenantRoom, tenantStay, tenantRent } = editedTenant;
+      const {
+        tenantName,
+        tenantContact,
+        tenantEmail,
+        tenantRoom,
+        tenantStay,
+        tenantRent,
+      } = editedTenant;
       const updatedData = {
         tenantName,
         tenantContact,
         tenantEmail,
         tenantRoom,
         tenantStay,
-        tenantRent
+        tenantRent,
       };
       await modifyData("tenants", editedTenant.id, updatedData);
       setModalOpen(false);
@@ -147,10 +153,9 @@ const Users = () => {
       });
       setTimeout(() => {
         window.location.reload();
-      }, 1000)
-
+      }, 1000);
     } catch (error) {
-      console.error('Error updating tenant document:', error);
+      console.error("Error updating tenant document:", error);
       toast({
         title: "Error",
         description: "An error occurred while updating the tenant document.",
@@ -175,7 +180,7 @@ const Users = () => {
         window.location.reload();
       }, 1000);
     } catch (error) {
-      console.error('Error deleting tenant document:', error);
+      console.error("Error deleting tenant document:", error);
       toast({
         title: "Error",
         description: "An error occurred while deleting the tenant document.",
@@ -187,12 +192,15 @@ const Users = () => {
   };
 
   // generate account
-  const [generatedCredentials, setGeneratedCredentials] = useState(null); 
+  const [generatedCredentials, setGeneratedCredentials] = useState(null);
   const [copied, setCopied] = useState(false);
   const handleGenerateAccounts = async (tenantEmail) => {
     const result = await addTenentCreds(tenantEmail);
-    if (result && result.password !== 'Already exists') {
-      setGeneratedCredentials({ email: result.email, password: result.password });
+    if (result && result.password !== "Already exists") {
+      setGeneratedCredentials({
+        email: result.email,
+        password: result.password,
+      });
       onOpen();
       toast({
         title: "Account Generated",
@@ -201,7 +209,7 @@ const Users = () => {
         duration: 5000,
         isClosable: true,
       });
-    } else if (result && result.password === 'Already exists') {
+    } else if (result && result.password === "Already exists") {
       toast({
         title: "Attention!!",
         description: `Account already exists for ${result.email}`,
@@ -220,12 +228,53 @@ const Users = () => {
       });
     }
   };
-  const viewCreds = () => {
-    onOpen();
-  }
+
+  const [selectedTenantId, setSelectedTenantId] = useState(null);
+
+  const fetchTenantCreds = async (tenantId) => {
+    try {
+      const tenantCredsQuery = collection(db, "tenantCreds");
+
+      const tenantCredsSnapshot = await getDocs(tenantCredsQuery);
+
+      if (tenantCredsSnapshot) {
+        // Set the fetched credentials to the state
+        setGeneratedCredentials({
+          email: tenantCredsSnapshot.email,
+          password: tenantCredsSnapshot.password,
+        });
+        onOpen();
+      } else {
+        // If no credentials found, display a message
+        toast({
+          title: "No Credentials Found",
+          description: "No credentials found for this tenant.",
+          status: "info",
+          duration: 5000,
+          isClosable: true,
+        });
+      }
+    } catch (error) {
+      console.error("Error fetching tenant credentials:", error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch tenant credentials.",
+        status: "error",
+        duration: 5000,
+        isClosable: true,
+      });
+    }
+  };
+
+  const viewCreds = (tenantId) => {
+    // Function to view tenant credentials
+    setSelectedTenantId(tenantId);
+    fetchTenantCreds(tenantId);
+  };
 
   return (
-    <>
+    <div className="">
+      <Breadcrumbs customClass={"mb-6"} />
       <Tabs size="md" variant="enclosed">
         <TabList>
           <Tab
@@ -248,85 +297,123 @@ const Users = () => {
             <Title size={"lg"} customClass={"mb-8"}>
               Total tenants {tenants.length}
             </Title>
-            <Skeleton isLoaded={!loading}>
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-center">
-                        tenant Name
-                      </th>
-                      <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-center">
-                        tenant Contact
-                      </th>
-                      <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-center">
-                        tenant Email
-                      </th>
-                      <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-center">
-                        tenant Room
-                      </th>
-                      <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-center">
-                        tenant Stay
-                      </th>
-                      <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-center">
-                        tenant Rent
-                      </th>
-                      <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-center">
-                        Actions
-                      </th>
-                    </tr>
-                  </thead>
+            {!error ? (
+              <>
+                <Skeleton isLoaded={!loading}>
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-center">
+                            tenant Name
+                          </th>
+                          <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-center">
+                            tenant Contact
+                          </th>
+                          <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-center">
+                            tenant Email
+                          </th>
+                          <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-center">
+                            tenant Room
+                          </th>
+                          <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-center">
+                            tenant Stay
+                          </th>
+                          <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-center">
+                            tenant Rent
+                          </th>
+                          <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-center">
+                            Actions
+                          </th>
+                        </tr>
+                      </thead>
 
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {tenants.map((tenant) => (
-                      <tr key={tenant.id}>
-                        <td className="p-3 whitespace-nowrap border-b text-center font-bold">{tenant.tenantName}</td>
-                        <td className="p-3 whitespace-nowrap border-b text-center">{tenant.tenantContact}</td>
-                        <td className="p-3 whitespace-nowrap border-b text-center">{tenant.tenantEmail}</td>
-                        <td className="p-3 whitespace-nowrap border-b text-center">{tenant.tenantRoom}</td>
-                        <td className="p-3 whitespace-nowrap border-b text-center">{tenant.tenantStay}</td>
-                        <td className="p-3 whitespace-nowrap border-b text-center">{tenant.tenantRent}</td>
-                        <td className="p-3 whitespace-nowrap">
-                          <div className="flex gap-3">
-                            <IconButton
-                              aria-label="Edit"
-                              icon={<i className="fa-regular fa-pencil-alt"></i>}
-                              onClick={() => handleEditClick(tenant)}
-                            />
-                            <IconButton
-                              aria-label="Delete"
-                              icon={<i className="fa-regular fa-trash-alt"></i>}
-                              onClick={() => handleDelete("tenants", tenant.id)}
-                            />
-                            <IconButton
-                              aria-label="Generate Accounts"
-                              icon={<i className="fa-regular fa-user-plus" />}
-                              onClick={() => {
-                                handleGenerateAccounts(tenant.tenantEmail)
-                                mergeTenantData()
-                              }}
-                            />
-                            <IconButton
-                              aria-label="View Account"
-                              icon={<i className="fa-regular fa-eye" />}
-                              onClick={viewCreds}
-                            />
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </Skeleton>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {tenants.map((tenant) => (
+                          <tr key={tenant.id}>
+                            <td className="p-3 whitespace-nowrap border-b text-center font-bold">
+                              {tenant.tenantName}
+                            </td>
+                            <td className="p-3 whitespace-nowrap border-b text-center">
+                              {tenant.tenantContact}
+                            </td>
+                            <td className="p-3 whitespace-nowrap border-b text-center">
+                              {tenant.tenantEmail}
+                            </td>
+                            <td className="p-3 whitespace-nowrap border-b text-center">
+                              {tenant.tenantRoom}
+                            </td>
+                            <td className="p-3 whitespace-nowrap border-b text-center">
+                              {tenant.tenantStay}
+                            </td>
+                            <td className="p-3 whitespace-nowrap border-b text-center">
+                              {tenant.tenantRent}
+                            </td>
+                            <td className="p-3 whitespace-nowrap">
+                              <div className="flex gap-3">
+                                <IconButton
+                                  aria-label="Edit"
+                                  icon={
+                                    <i className="fa-regular fa-pencil-alt"></i>
+                                  }
+                                  onClick={() => handleEditClick(tenant)}
+                                />
+                                <IconButton
+                                  aria-label="Delete"
+                                  icon={
+                                    <i className="fa-regular fa-trash-alt"></i>
+                                  }
+                                  onClick={() =>
+                                    handleDelete("tenants", tenant.id)
+                                  }
+                                />
+                                <IconButton
+                                  aria-label="Generate Accounts"
+                                  icon={
+                                    <i className="fa-regular fa-user-plus" />
+                                  }
+                                  onClick={() => {
+                                    handleGenerateAccounts(tenant.tenantEmail);
+                                    mergeTenantData();
+                                  }}
+                                />
+                                <IconButton
+                                  aria-label="View Account"
+                                  id={tenant.id}
+                                  icon={<i className="fa-regular fa-eye" />}
+                                  onClick={viewCreds}
+                                />
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </Skeleton>
+              </>
+            ) : (
+              <>
+                <div className="text-danger p-4 m-4 max-w-fit mx-auto text-lg font-semibold text-center rounded-2xl">
+                  *Something went wrong please try after some time or refresh
+                  the page
+                </div>
+              </>
+            )}
             <Modal isOpen={isOpen} onClose={onClose}>
               <ModalOverlay />
               <ModalContent>
                 <ModalHeader>Generated Credentials</ModalHeader>
                 <ModalCloseButton />
                 <ModalBody>
-                  <p>Email: {generatedCredentials ? generatedCredentials.email : ""}</p>
-                  <p>Password: {generatedCredentials ? generatedCredentials.password : ""}</p>
+                  {generatedCredentials ? (
+                    <>
+                      <p>Email: {generatedCredentials.email}</p>
+                      <p>Password: {generatedCredentials.password}</p>
+                    </>
+                  ) : (
+                    <p>No credentials available.</p>
+                  )}
                 </ModalBody>
                 <ModalFooter>
                   <Button colorScheme="blue" mr={3} onClick={onClose}>
@@ -335,13 +422,6 @@ const Users = () => {
                 </ModalFooter>
               </ModalContent>
             </Modal>
-
-            {loggedInUserData ? (
-              <div>
-                <p>Name: {loggedInUserData.tenantName.split(' ').map(word => word.charAt(0).toUpperCase())}</p>
-                <p>Email: {loggedInUserData.email}</p>
-              </div>
-            ) : 'asdwd'}
           </TabPanel>
           <TabPanel>
             <form className="" onSubmit={formik.handleSubmit}>
@@ -383,7 +463,7 @@ const Users = () => {
                       value={formik.values.tenantContact}
                     />
                     {formik.touched.tenantContact &&
-                      formik.errors.tenantContact ? (
+                    formik.errors.tenantContact ? (
                       <div className="text-red-500 text-sm font-semibold">
                         {formik.errors.tenantContact}
                       </div>
@@ -501,7 +581,12 @@ const Users = () => {
                 type="text"
                 name="tenantName"
                 value={editedTenant?.tenantName || ""}
-                onChange={(e) => setEditedTenant({ ...editedTenant, tenantName: e.target.value })}
+                onChange={(e) =>
+                  setEditedTenant({
+                    ...editedTenant,
+                    tenantName: e.target.value,
+                  })
+                }
               />
             </FormControl>
             <FormControl mt={4}>
@@ -510,7 +595,12 @@ const Users = () => {
                 type="text"
                 name="tenantContact"
                 value={editedTenant?.tenantContact || ""}
-                onChange={(e) => setEditedTenant({ ...editedTenant, tenantContact: e.target.value })}
+                onChange={(e) =>
+                  setEditedTenant({
+                    ...editedTenant,
+                    tenantContact: e.target.value,
+                  })
+                }
               />
             </FormControl>
             <FormControl mt={4}>
@@ -519,7 +609,12 @@ const Users = () => {
                 type="email"
                 name="tenantEmail"
                 value={editedTenant?.tenantEmail || ""}
-                onChange={(e) => setEditedTenant({ ...editedTenant, tenantEmail: e.target.value })}
+                onChange={(e) =>
+                  setEditedTenant({
+                    ...editedTenant,
+                    tenantEmail: e.target.value,
+                  })
+                }
               />
             </FormControl>
             <FormControl mt={4}>
@@ -528,7 +623,12 @@ const Users = () => {
                 type="text"
                 name="tenantRoom"
                 value={editedTenant?.tenantRoom || ""}
-                onChange={(e) => setEditedTenant({ ...editedTenant, tenantRoom: e.target.value })}
+                onChange={(e) =>
+                  setEditedTenant({
+                    ...editedTenant,
+                    tenantRoom: e.target.value,
+                  })
+                }
               />
             </FormControl>
             <FormControl mt={4}>
@@ -537,7 +637,12 @@ const Users = () => {
                 type="text"
                 name="tenantStay"
                 value={editedTenant?.tenantStay || ""}
-                onChange={(e) => setEditedTenant({ ...editedTenant, tenantStay: e.target.value })}
+                onChange={(e) =>
+                  setEditedTenant({
+                    ...editedTenant,
+                    tenantStay: e.target.value,
+                  })
+                }
               />
             </FormControl>
             <FormControl mt={4}>
@@ -546,11 +651,15 @@ const Users = () => {
                 type="number"
                 name="tenantRent"
                 value={editedTenant?.tenantRent || ""}
-                onChange={(e) => setEditedTenant({ ...editedTenant, tenantRent: e.target.value })}
+                onChange={(e) =>
+                  setEditedTenant({
+                    ...editedTenant,
+                    tenantRent: e.target.value,
+                  })
+                }
               />
             </FormControl>
           </ModalBody>
-
 
           <ModalFooter>
             <Button colorScheme="blue" mr={3} onClick={handleSave}>
@@ -560,7 +669,7 @@ const Users = () => {
           </ModalFooter>
         </ModalContent>
       </Modal>
-    </>
+    </div>
   );
 };
 
