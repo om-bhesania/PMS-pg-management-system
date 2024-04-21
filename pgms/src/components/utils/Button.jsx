@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 
-const Button = ({ role, label, variant, customClass, url, onClick }) => {
+const Button = ({ role, label, variant, customClass, url, onClick,type }) => {
   const style = {
     primary:
       "bg-primary text-white hover:outline-primary hover:outline hover:text-primary hover:bg-transparent",
@@ -22,9 +22,9 @@ const Button = ({ role, label, variant, customClass, url, onClick }) => {
     <>
       {role === "button" ? (
         <button
-          className={`${style[variant]}  ${baseStyle ? baseStyle : ''} ${customClass ? customClass : ''} role--${role}`}
+          className={`${style[variant]} ${customClass ? customClass : ''} ${baseStyle ? baseStyle : ''} role--${role}`}
           onClick={onClick}
-          type="button"
+          type={type}
           href={url}
         >
           {label}
@@ -33,6 +33,7 @@ const Button = ({ role, label, variant, customClass, url, onClick }) => {
         <Link
           className={`${style[variant]} || ${baseStyle} ${customClass} role--${role}`}
           to={url}
+          onClick={onClick}
         >
           {label}
         </Link>

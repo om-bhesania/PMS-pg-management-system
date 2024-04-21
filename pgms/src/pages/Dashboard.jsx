@@ -3,6 +3,7 @@ import { Card, Divider, AbsoluteCenter, Box, Spinner } from "@chakra-ui/react";
 import Title from "./../components/utils/Title";
 import useGetData from "../hooks/getData";
 import useLoggedInUserData from "../hooks/useLoggedInUserData";
+import SpinnerComponent from "../components/Spinner";
 
 const Dashboard = () => {
   const { loading, error, tenants, fetchtenants } = useGetData();
@@ -61,7 +62,7 @@ const Dashboard = () => {
                 customSize={"text-5xl"}
               >
                 {loading ? (
-                  <Spinner className="text-primary" size={"xl"} />
+                  <SpinnerComponent />
                 ) : error ? (
                   <Title
                     size={"custom"}
@@ -80,7 +81,7 @@ const Dashboard = () => {
           <div className="latest-info flex flex-col">
             <div className="my-10" />
             <div className="flex p-6 rounded-lg outline-2 outline-primary outline">
-               
+
             </div>
           </div>
         </div>

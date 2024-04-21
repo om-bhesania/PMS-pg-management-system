@@ -13,3 +13,8 @@
         color: #003E56;
     }
 }
+
+input{
+    border:1px solid #003E56;
+    @apply rounded p-1;
+}

@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Link, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Dashboard from "./pages/Dashboard";
 import Sidebar, { Logout } from "./components/sidebar/Sidebar";
 import Users from "./pages/Users";
@@ -10,10 +10,8 @@ import ProtectedRoute from "./components/Login/auth";
 import { useEffect, useState } from "react";
 import Title from "./components/utils/Title";
 import Button from "./components/utils/Button";
-import Breadcrumbs from "./components/utils/breadcrumbs";
 import useGetData from "./hooks/getData";
 import { AuthProvider } from "./components/authProvider";
-import OwnerRoute from "./components/Login/ownerAuth";
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(localStorage.getItem("token"));
@@ -35,7 +33,7 @@ function App() {
   return (
     <>
       <AuthProvider>
-        <BrowserRouter>
+        <BrowserRouter basename="pgms">
           <Sidebar>
             <div className="flex flex-col gap-1 mb-5  bg-slate-200 p-4 rounded-xl">
               <div className="flex justify-between items-start">
@@ -49,9 +47,9 @@ function App() {
                 <div className="flex items-center gap-3">
                   {isLoggedIn ? (
                     <>
-                      <button className="flex items-center justify-center p-3 rounded-lg text-lg shadow-lg bg-primary text-white hover:shadow-2xl hover:shadow-black active:scale-[0.8] ease-in-out duration-300">
+                      <a type="button" className="flex items-center justify-center p-3 rounded-lg text-lg shadow-lg bg-primary text-white hover:shadow-2xl hover:shadow-black active:scale-[0.8] ease-in-out duration-300">
                         <i className="fa-sharp fa-regular fa-bell "></i>
-                      </button>
+                      </a>
                       <Logout />
                       {currentUser ? (
                         <>
@@ -85,11 +83,11 @@ function App() {
             </div>
             <Routes>
               <Route
-                path="/"
+                path="/pgms/"
                 element={<ProtectedRoute component={Dashboard} />}
               />
               <Route
-                path="/dashboard"
+                path="/pgms/dashboard"
                 element={<ProtectedRoute component={Dashboard} />}
               />
               {Role && Role === "user" ? null : (
@@ -114,7 +112,7 @@ function App() {
                 </>
               )}
 
-              <Route path="/login" element={<Login />} />
+              <Route path="/pgms/login" element={<Login />} />
             </Routes>
           </Sidebar>
         </BrowserRouter>

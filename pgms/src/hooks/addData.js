@@ -11,8 +11,16 @@ const addData = () => {
       throw e;
     }
   };
-
-  return { addTenents };
+  const addElectricityBill = async (tenentEleData) => {
+    try {
+      const docRef = await addDoc(collection(db, "eleBill"), tenentEleData);
+      return docRef.id;
+    } catch (e) {
+      console.error("Error adding document: ", e);
+      throw e;
+    }
+  };
+  return { addTenents, addElectricityBill };
 };
 
 export default addData;
