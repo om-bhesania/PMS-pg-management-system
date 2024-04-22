@@ -26,17 +26,16 @@ import {
 import { useFormik } from "formik";
 import useAddData from "../hooks/addData";
 import useGetData from "../hooks/getData";
-import { useContext, useState } from "react";
+import { useState } from "react";
 import useModifyData from "../hooks/modifyData";
 import useDeleteData from "../hooks/deleteData";
 import useAddTenentCreds from "../hooks/addTenent";
-import useLoggedInUserData from "../hooks/useLoggedInUserData";
 import Breadcrumbs from "../components/utils/breadcrumbs";
-import { Firestore, collection, getDocs } from "firebase/firestore";
+import { collection, getDocs } from "firebase/firestore";
 import { db } from "../firebase/firebase";
 const Users = () => {
-  const { addtenants } = useAddData();
-  const { loading, tenants, tenantCreds, error, masterData, mergeTenantData } =
+  const { addTenants } = useAddData();
+  const { loading, tenants, error, mergeTenantData } =
     useGetData();
   const { modifyData } = useModifyData();
   const { deleteData } = useDeleteData();
@@ -81,7 +80,7 @@ const Users = () => {
     },
     onSubmit: async (values) => {
       try {
-        const docId = await addtenants(values);
+        const docId = await addTenants(values);
         const examplePromise = new Promise((resolve, reject) => {
           if (docId) setTimeout(() => resolve(200), 3000);
           if (!docId) setTimeout(() => reject(200), 3000);

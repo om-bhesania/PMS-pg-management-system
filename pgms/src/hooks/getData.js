@@ -1,110 +1,130 @@
 import { useEffect, useState } from "react";
-import { addDoc, collection, getDocs, query, where } from "firebase/firestore";
+import {
+  collection,
+  onSnapshot,
+  query,
+  where,
+  addDoc,
+} from "firebase/firestore";
 import { db } from "../firebase/firebase";
 
 const useGetData = () => {
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [tenants, setTenants] = useState([]);
   const [tenantCreds, setTenantCreds] = useState([]);
   const [masterData, setMasterData] = useState([]);
-  const [Role, setRole] = useState([]);
-  const [masterDatabase, setMasterDatabase] = useState([]);
+  const [Role, setRole] = useState(null);
 
-  const fetchTenants = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      if (tenants.length === 0) {
-        const querySnapshot = await getDocs(collection(db, "tenants"));
+  // Fetch and listen for tenants data
+  useEffect(() => {
+    const tenantsCollection = collection(db, "tenants");
+    const unsubscribe = onSnapshot(
+      tenantsCollection,
+      (querySnapshot) => {
         const data = querySnapshot.docs.map((doc) => ({
           id: doc.id,
           ...doc.data(),
         }));
         setTenants(data);
+        setLoading(false);
+      },
+      (snapshotError) => {
+        console.error("Error fetching tenants:", snapshotError);
+        setError(snapshotError);
+        setLoading(false);
       }
-    } catch (error) {
-      setError(error);
-    } finally {
-      setLoading(false);
-    }
-  };
+    );
 
-  const fetchTenantCreds = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      if (tenantCreds.length === 0) {
-        const querySnapshot = await getDocs(collection(db, "tenantCreds"));
+    return () => {
+      unsubscribe();
+    };
+  }, []);
+
+  // Fetch and listen for tenant credentials
+  useEffect(() => {
+    const tenantCredsCollection = collection(db, "tenantCreds");
+    const unsubscribe = onSnapshot(
+      tenantCredsCollection,
+      (querySnapshot) => {
         const data = querySnapshot.docs.map((doc) => ({
           id: doc.id,
           ...doc.data(),
         }));
         setTenantCreds(data);
+      },
+      (snapshotError) => {
+        console.error("Error fetching tenant credentials:", snapshotError);
+        setError(snapshotError);
       }
-    } catch (error) {
-      setError(error);
-    } finally {
-      setLoading(false);
-    }
-  };
+    );
 
-  const fetchMasterData = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      if (masterData.length === 0) {
-        const querySnapshot = await getDocs(
-          collection(db, "MasterTenantsData")
-        );
+    return () => {
+      unsubscribe();
+    };
+  }, []);
+
+  // Fetch and listen for master data
+  useEffect(() => {
+    const masterDataCollection = collection(db, "MasterTenantsData");
+    const unsubscribe = onSnapshot(
+      masterDataCollection,
+      (querySnapshot) => {
         const data = querySnapshot.docs.map((doc) => ({
           id: doc.id,
           ...doc.data(),
         }));
         setMasterData(data);
+      },
+      (snapshotError) => {
+        console.error("Error fetching master data:", snapshotError);
+        setError(snapshotError);
       }
-    } catch (error) {
-      setError(error);
-    } finally {
-      setLoading(false);
-    }
+    );
+
+    return () => {
+      unsubscribe();
+    };
+  }, []);
+
+  const fetchCurrentUserDetails = () => {
+    const role = sessionStorage.getItem("role");
+    setRole(role);
   };
+
+  useEffect(() => {
+    fetchCurrentUserDetails();
+  }, []);
 
   const mergeTenantData = async () => {
     try {
-      const tenantsQuerySnapshot = await getDocs(collection(db, "tenants"));
-
       const masterDatabaseData = [];
 
-      tenantsQuerySnapshot.forEach(async (tenantDoc) => {
-        const tenantData = tenantDoc.data();
+      tenants.forEach(async (tenantDoc) => {
+        const tenantData = {
+          id: tenantDoc.id,
+          ...tenantDoc,
+        };
+
         const tenantEmail = tenantData.tenantEmail;
 
-        const matchingTenantCredsQuerySnapshot = await getDocs(
-          query(
-            collection(db, "tenantCreds"),
-            where("email", "==", tenantEmail)
-          )
+        // Find the corresponding tenantCred
+        const matchingTenantCred = tenantCreds.find(
+          (cred) => cred.email === tenantEmail
         );
-        if (!matchingTenantCredsQuerySnapshot.empty) {
-          const matchingTenantCredsDoc =
-            matchingTenantCredsQuerySnapshot.docs[0];
-          const tenantCredsData = matchingTenantCredsDoc.data();
 
+        if (matchingTenantCred) {
           const masterTenantData = {
             ...tenantData,
-            ...tenantCredsData,
+            ...matchingTenantCred,
           };
 
-          // Check if the document already exists in MasterTenantsData collection
-          const masterDataQuerySnapshot = await getDocs(
-            query(
-              collection(db, "MasterTenantsData"),
-              where("tenantEmail", "==", tenantEmail)
-            )
+          // Check if the document already exists in MasterTenantsData
+          const existingMasterData = masterData.find(
+            (master) => master.tenantEmail === tenantEmail
           );
-          if (masterDataQuerySnapshot.empty) {
-            // If not found, add it to the collection
+
+          if (!existingMasterData) {
             await addDoc(collection(db, "MasterTenantsData"), masterTenantData);
           } else {
             console.log(
@@ -116,33 +136,20 @@ const useGetData = () => {
         }
       });
 
-      setMasterDatabase(masterDatabaseData);
       console.log("Merge completed successfully.");
     } catch (error) {
       console.error("Error merging tenant data:", error);
+      setError(error);
     }
   };
-
-  const fetchCurrentUserDetails = () => {
-    const Role = sessionStorage.getItem("role");
-    setRole(Role);
-  };
-  useEffect(() => {
-    fetchTenants();
-    fetchTenantCreds();
-    fetchMasterData();
-    fetchCurrentUserDetails();
-  }, []);
 
   return {
     loading,
     error,
     tenants,
-    Role,
     tenantCreds,
     masterData,
-    fetchMasterData,
-    fetchTenants,
+    Role,
     mergeTenantData,
   };
 };

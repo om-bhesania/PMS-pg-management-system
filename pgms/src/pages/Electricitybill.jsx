@@ -61,7 +61,7 @@ const ElectricityBill = () => {
           const newBillData = {
             roomNumber: selectedRoom,
             bills: [electricityBillData],
-            payment: "pending"
+            paymentStatus: 'pending',
           };
           await addDoc(collection(db, "eleBill"), newBillData);
         }
@@ -138,7 +138,24 @@ const ElectricityBill = () => {
     }
   };
 
+  // Extract unique room numbers from tenants list
+  const uniqueRooms = [...new Set(tenants.map((tenant) => tenant.tenantRoom))];
 
+  // Sort integers and place string values at the end
+  uniqueRooms.sort((a, b) => {
+    const aIsNumeric = !isNaN(a);
+    const bIsNumeric = !isNaN(b);
+
+    if (aIsNumeric && bIsNumeric) {
+      return parseInt(a) - parseInt(b);
+    } else if (aIsNumeric) {
+      return -1;
+    } else if (bIsNumeric) {
+      return 1;
+    } else {
+      return a.localeCompare(b);
+    }
+  });
 
 
   return (
@@ -157,9 +174,9 @@ const ElectricityBill = () => {
               placeholder="Select Room"
               className="mt-1 block w-full rounded-md bg-primary text-primary border-transparent focus:border-secondary focus:bg-white focus:ring-0"
             >
-              {tenants.map((tenant) => (
-                <option key={tenant.id} value={tenant.tenantRoom}>
-                  {tenant.tenantRoom}
+              {uniqueRooms.map((room, index) => (
+                <option key={index} value={room}>
+                  {room}
                 </option>
               ))}
             </Select>

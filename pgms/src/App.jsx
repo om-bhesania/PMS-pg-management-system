@@ -12,6 +12,7 @@ import Title from "./components/utils/Title";
 import Button from "./components/utils/Button";
 import useGetData from "./hooks/getData";
 import { AuthProvider } from "./components/authProvider";
+import Notify from './components/notification/notify';
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(localStorage.getItem("token"));
@@ -33,7 +34,7 @@ function App() {
   return (
     <>
       <AuthProvider>
-        <BrowserRouter basename="pgms">
+        <BrowserRouter>
           <Sidebar>
             <div className="flex flex-col gap-1 mb-5  bg-slate-200 p-4 rounded-xl">
               <div className="flex justify-between items-start">
@@ -47,9 +48,7 @@ function App() {
                 <div className="flex items-center gap-3">
                   {isLoggedIn ? (
                     <>
-                      <a type="button" className="flex items-center justify-center p-3 rounded-lg text-lg shadow-lg bg-primary text-white hover:shadow-2xl hover:shadow-black active:scale-[0.8] ease-in-out duration-300">
-                        <i className="fa-sharp fa-regular fa-bell "></i>
-                      </a>
+                     <Notify/>
                       <Logout />
                       {currentUser ? (
                         <>
@@ -83,11 +82,11 @@ function App() {
             </div>
             <Routes>
               <Route
-                path="/pgms/"
+                path="/"
                 element={<ProtectedRoute component={Dashboard} />}
               />
               <Route
-                path="/pgms/dashboard"
+                path="/dashboard"
                 element={<ProtectedRoute component={Dashboard} />}
               />
               {Role && Role === "user" ? null : (
@@ -112,7 +111,7 @@ function App() {
                 </>
               )}
 
-              <Route path="/pgms/login" element={<Login />} />
+              <Route path="/login" element={<Login />} />
             </Routes>
           </Sidebar>
         </BrowserRouter>

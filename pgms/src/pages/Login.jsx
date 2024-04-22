@@ -36,7 +36,7 @@ const Login = () => {
       // Fetch tenant credentials from the database
       const tenantCredsQuery = query(
         collection(db, "tenantCreds"),
-        where("email", "==", email)
+        where("email", "==", email )
       );
       const tenantCredsSnapshot = await getDocs(tenantCredsQuery);
 
@@ -49,7 +49,7 @@ const Login = () => {
           setEmailInitial(email.toLowerCase());
           if (tenantData.email) {
             sessionStorage.setItem("email", email);
-            sessionStorage.setItem("role", tenantData.role);
+            sessionStorage.setItem("role", tenantData.role); 
             sessionStorage.setItem("data", JSON.stringify(tenantData));
             setTimeout(() => {
               sessionStorage.clear();
