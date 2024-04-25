@@ -13,6 +13,9 @@ import Button from "./components/utils/Button";
 import useGetData from "./hooks/getData";
 import { AuthProvider } from "./components/authProvider";
 import Notify from './components/notification/notify';
+import TempPassGen from "./pages/tempPassGen";
+import ShowBills from "./pages/showBills";
+import ShowRentDue from "./pages/ShowRentDue";
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(localStorage.getItem("token"));
@@ -48,7 +51,7 @@ function App() {
                 <div className="flex items-center gap-3">
                   {isLoggedIn ? (
                     <>
-                     <Notify/>
+                      <Notify />
                       <Logout />
                       {currentUser ? (
                         <>
@@ -112,6 +115,8 @@ function App() {
               )}
 
               <Route path="/login" element={<Login />} />
+              <Route path="/passgen" element={<TempPassGen />} />
+              <Route path="/showbill" element={<ShowRentDue />} />
             </Routes>
           </Sidebar>
         </BrowserRouter>
