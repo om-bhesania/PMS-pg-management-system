@@ -13,22 +13,18 @@ import {
   ModalContent,
   ModalHeader,
   ModalBody,
-  ModalFooter,
-  Text,
+  ModalFooter, 
 } from "@chakra-ui/react";
 import Button from "../components/utils/Button";
 import {
   addDoc,
   collection,
   updateDoc,
-  doc,
-  getDoc,
-  deleteDoc,
+  doc, 
 } from "firebase/firestore";
 import { db } from "../firebase/firebase";
 import useGetData from "../hooks/getData";
-import Breadcrumbs from "../components/utils/breadcrumbs";
-import Notify from "../components/notification/notify";
+import Breadcrumbs from "../components/utils/breadcrumbs"; 
 import ShowRentDue from "./ShowRentDue";
 
 const Rentdue = () => {
@@ -53,14 +49,10 @@ const Rentdue = () => {
     validationSchema,
     onSubmit: async (values, { resetForm }) => {
       try {
-        const { rentAmount, rentPeriodStart, rentPeriodEnd } = values;
-
-        // Check if rent already exists for the selected room
+        const { rentAmount, rentPeriodStart, rentPeriodEnd } = values; 
         const existingRentDue = rentDue.find(
           (rent) => rent.roomNumber === selectedRoom
-        );
-
-        // Check if the same rent period already exists
+        ); 
         if (
           existingRentDue &&
           existingRentDue.rents.some(
@@ -78,15 +70,13 @@ const Rentdue = () => {
           rentPeriodEnd,
           rentAmount,
         };
-
-        // If rent already exists for the room, update it
+ 
         if (existingRentDue) {
           existingRentDue.rents.push(rentDueData);
           await updateDoc(doc(db, "rentdue", existingRentDue.id), {
             rents: existingRentDue.rents,
           });
-        } else {
-          // Add new rent entry for the room
+        } else { 
           const newRentData = {
             rents: [
               {

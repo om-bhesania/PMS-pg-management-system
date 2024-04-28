@@ -23,10 +23,10 @@ const ElectricityBill = () => {
     billPeriodStart: Yup.date().required("Bill period start is required"),
     billPeriodEnd: Yup.date().required("Bill period end is required"),
   });
-
+  const totalBill = eleBill.map(bill => bill.bills.length > 0 ? true : false);
   const formik = useFormik({
     initialValues: {
-      billAmount: "",
+      billAmount: "2000",
       billPeriodStart: "",
       billPeriodEnd: "",
     },
@@ -44,24 +44,26 @@ const ElectricityBill = () => {
           return;
         }
 
-        const electricityBillData = {
+        const electricityBillData = { 
           billPeriodStart,
           billPeriodEnd,
           billAmount,
+          paymentStatus: 'pending',
+          id: Math.random().toString(36).substr(2, 9), 
         };
 
         // If the bill for the room exists, update it
         if (existingBill) {
           existingBill.bills.push(electricityBillData);
           await updateDoc(doc(db, "eleBill", existingBill.id), {
-            bills: existingBill.bills
+            bills: existingBill.bills,
           });
         } else {
           // Add new bill entry for the room
           const newBillData = {
             roomNumber: selectedRoom,
             bills: [electricityBillData],
-            paymentStatus: 'pending',
+
           };
           await addDoc(collection(db, "eleBill"), newBillData);
         }
@@ -91,7 +93,6 @@ const ElectricityBill = () => {
     try {
       const existingBill = eleBill.find(bill => bill.roomNumber === selectedRoom);
       const { billAmount, billPeriodStart, billPeriodEnd } = formik.values;
-
       if (existingBill) {
         const billToUpdate = existingBill.bills.find(bill =>
           bill.billPeriodStart === billPeriodStart && bill.billPeriodEnd === billPeriodEnd
@@ -156,7 +157,6 @@ const ElectricityBill = () => {
       return a.localeCompare(b);
     }
   });
-
 
   return (
     <>
@@ -256,7 +256,7 @@ const ElectricityBill = () => {
       </Modal>
 
       <div className="mt-5">
-        <ShowBills />
+        <ShowBills values={totalBill} />
       </div>
 
     </>

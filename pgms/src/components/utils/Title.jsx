@@ -1,4 +1,4 @@
-const Title = ({ children, size, customClass, customSize, colorTheme }) => {
+const Title = ({ children, size, customClass, customSize, colorTheme , ps = true }) => {
   const baseStyle =
     "font-bold text-primaryDark  font-primary text-primary bg-transparent";
   const color = {
@@ -19,9 +19,8 @@ const Title = ({ children, size, customClass, customSize, colorTheme }) => {
   return (
     <>
       <div
-        className={`${customClass ? customClass : ""} ${baseStyle} ${
-          style[size]
-        } ${color[colorTheme]} `}
+        className={`${customClass ? customClass : ""} ${ps ? 'ps-5' : ''} ${baseStyle} ${style[size] ? style[size] : ''
+          } ${color[colorTheme] ? color[colorTheme] : '' } `}
       >
         {children}
       </div>
