@@ -42,6 +42,8 @@ const TempPassGen = () => {
             <span> Decrypted Password: {decryptedPassword}</span>
           </div>
         )}
+        <span className='me-5'>bhesaniaom@gmail.com</span> <br />
+        <span>14fQkyMm</span>
       </div>
     );
 };

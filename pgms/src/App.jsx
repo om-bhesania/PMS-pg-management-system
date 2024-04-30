@@ -26,8 +26,8 @@ function App() {
     setCurrentUser(CurrentUserInfo);
   };
   const { email, password } = Login();
-  const { tenantCreds, masterData, Role } = useGetData();
-  useEffect(() => {
+  const { tenantCreds, masterData, Role, mergeTenantData } = useGetData();
+  useEffect(() => { 
     if (isLoggedIn) {
       setCurrentUser(sessionStorage.getItem("role"));
     }
@@ -102,6 +102,7 @@ function App() {
                   <Route
                     path="/electricitybill"
                     element={<ProtectedRoute component={Electricitybill} />}
+
                   />
                   <Route
                     path="/rentdue"
@@ -116,7 +117,6 @@ function App() {
 
               <Route path="/login" element={<Login />} />
               <Route path="/passgen" element={<TempPassGen />} />
-              <Route path="/showbill" element={<ShowRentDue />} />
             </Routes>
           </Sidebar>
         </BrowserRouter>

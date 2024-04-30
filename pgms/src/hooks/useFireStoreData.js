@@ -35,7 +35,7 @@ const useFirestoreData = () => {
           const data = querySnapshot.docs.map((doc) => ({
             id: doc.id,
             ...doc.data(),
-          }));
+          })); 
           setRentDue(data);
           setLoading(false);
         },

@@ -35,63 +35,68 @@ const Rentdue = () => {
   const toast = useToast();
 
   const validationSchema = Yup.object().shape({
-    rentAmount: Yup.number().required("Rent amount is required").min(0),
-    rentPeriodStart: Yup.date().required("Rent period start is required"),
-    rentPeriodEnd: Yup.date().required("Rent period end is required"),
+    rentAmount: Yup.number().required("Bill amount is required").min(0),
+    rentPeriodStart: Yup.date().required("Bill period start is required"),
+    rentPeriodEnd: Yup.date().required("Bill period end is required"),
   });
-
+  const totalBill = rentDue.map((bill) =>
+    bill.bills.length > 0 ? true : false
+  );
   const formik = useFormik({
     initialValues: {
       rentAmount: "",
       rentPeriodStart: "",
       rentPeriodEnd: "",
     },
-    validationSchema,
+    validationSchema: validationSchema,
     onSubmit: async (values, { resetForm }) => {
       try {
-        const { rentAmount, rentPeriodStart, rentPeriodEnd } = values; 
-        const existingRentDue = rentDue.find(
-          (rent) => rent.roomNumber === selectedRoom
-        ); 
+        const { rentAmount, rentPeriodStart, rentPeriodEnd } = values;
+
+        // Check if a bill already exists for the selected room
+        const existingBill = rentDue.find(
+          (bill) => bill.roomNumber === selectedRoom
+        );
+
+        // Check if the same bill period already exists for the selected room
         if (
-          existingRentDue &&
-          existingRentDue.rents.some(
-            (r) =>
-              r.rentPeriodEnd === rentPeriodEnd &&
-              r.rentPeriodStart === rentPeriodStart
+          existingBill &&
+          existingBill.bills.some(
+            (b) =>
+              b.rentPeriodEnd === rentPeriodEnd &&
+              b.rentPeriodStart === rentPeriodStart
           )
         ) {
           setIsModalOpen(true);
           return;
         }
 
-        const rentDueData = {
+        const RentBillData = {
           rentPeriodStart,
           rentPeriodEnd,
           rentAmount,
+          paymentStatus: "pending",
+          id: Math.random().toString(36).substr(2, 9),
         };
- 
-        if (existingRentDue) {
-          existingRentDue.rents.push(rentDueData);
-          await updateDoc(doc(db, "rentdue", existingRentDue.id), {
-            rents: existingRentDue.rents,
+
+        // If the bill for the room exists, update it
+        if (existingBill) {
+          existingBill.bills.push(RentBillData);
+          await updateDoc(doc(db, "rentdue", existingBill.id), {
+            bills: existingBill.bills,
           });
-        } else { 
-          const newRentData = {
-            rents: [
-              {
-                ...rentDueData,
-                paymentStatus: "pending",
-                roomNumber: selectedRoom,
-              },
-            ],
+        } else {
+          // Add new bill entry for the room
+          const newBillData = {
+            roomNumber: selectedRoom,
+            bills: [RentBillData],
           };
-          await addDoc(collection(db, "rentdue"), newRentData);
+          await addDoc(collection(db, "rentdue"), newBillData);
         }
 
         toast({
           title: "Success",
-          description: "Rent due added successfully.",
+          description: "Electricity bill added successfully.",
           status: "success",
           duration: 5000,
           isClosable: true,
@@ -99,10 +104,10 @@ const Rentdue = () => {
 
         resetForm();
       } catch (error) {
-        console.error("Error adding rent due:", error);
+        console.error("Error adding Rent bill:", error);
         toast({
           title: "Error",
-          description: "Failed to add rent due. Please try again.",
+          description: "Failed to add Rent bill. Please try again.",
           status: "error",
           duration: 5000,
           isClosable: true,
@@ -110,31 +115,29 @@ const Rentdue = () => {
       }
     },
   });
-
   const handleModify = async () => {
     try {
-      const existingRentDue = rentDue.find(
-        (rent) => rent.roomNumber === selectedRoom
+      const existingBill = rentDue.find(
+        (bill) => bill.roomNumber === selectedRoom
       );
       const { rentAmount, rentPeriodStart, rentPeriodEnd } = formik.values;
-
-      if (existingRentDue) {
-        const rentToUpdate = existingRentDue.rents.find(
-          (rent) =>
-            rent.rentPeriodStart === rentPeriodStart &&
-            rent.rentPeriodEnd === rentPeriodEnd
+      if (existingBill) {
+        const billToUpdate = existingBill.bills.find(
+          (bill) =>
+            bill.rentPeriodStart === rentPeriodStart &&
+            bill.rentPeriodEnd === rentPeriodEnd
         );
 
-        if (rentToUpdate) {
-          rentToUpdate.rentAmount = rentAmount;
+        if (billToUpdate) {
+          billToUpdate.rentAmount = rentAmount;
 
-          await updateDoc(doc(db, "rentdue", existingRentDue.id), {
-            rents: existingRentDue.rents,
+          await updateDoc(doc(db, "rentDue", existingBill.id), {
+            bills: existingBill.bills,
           });
 
           toast({
             title: "Success",
-            description: "Rent due modified successfully.",
+            description: "Electricity bill modified successfully.",
             status: "success",
             duration: 5000,
             isClosable: true,
@@ -143,11 +146,12 @@ const Rentdue = () => {
           setIsModalOpen(false);
           formik.resetForm();
         } else {
-          console.error("Specified rent period not found in existing rent.");
+          // Handle case where the specified bill period doesn't exist in the existingBill
+          console.error("Specified bill period not found in existing bill.");
           toast({
             title: "Error",
             description:
-              "Specified rent period not found in existing rent. Please try again.",
+              "Specified bill period not found in existing bill. Please try again.",
             status: "error",
             duration: 5000,
             isClosable: true,
@@ -155,10 +159,10 @@ const Rentdue = () => {
         }
       }
     } catch (error) {
-      console.error("Error modifying rent due:", error);
+      console.error("Error modifying electricity bill:", error);
       toast({
         title: "Error",
-        description: "Failed to modify rent due. Please try again.",
+        description: "Failed to modify electricity bill. Please try again.",
         status: "error",
         duration: 5000,
         isClosable: true,
@@ -166,8 +170,10 @@ const Rentdue = () => {
     }
   };
 
+  // Extract unique room numbers from tenants list
   const uniqueRooms = [...new Set(tenants.map((tenant) => tenant.tenantRoom))];
 
+  // Sort integers and place string values at the end
   uniqueRooms.sort((a, b) => {
     const aIsNumeric = !isNaN(a);
     const bIsNumeric = !isNaN(b);
@@ -263,7 +269,9 @@ const Rentdue = () => {
             />
           </FormControl>
           {formik.touched.rentPeriodEnd && formik.errors.rentPeriodEnd ? (
-            <div className="text-red-500 mt-1">{formik.errors.rentPeriodEnd}</div>
+            <div className="text-red-500 mt-1">
+              {formik.errors.rentPeriodEnd}
+            </div>
           ) : null}
         </div>
       </form>
@@ -295,7 +303,7 @@ const Rentdue = () => {
       </Modal>
 
       <div className="mt-5">
-        <ShowRentDue />
+        <ShowRentDue values={totalBill} />
       </div>
     </>
   );

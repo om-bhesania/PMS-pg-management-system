@@ -1,28 +1,26 @@
 import React, { useEffect, useState } from "react";
-import { collection, getDocs, onSnapshot } from "firebase/firestore";
+import { collection, onSnapshot, doc, updateDoc } from "firebase/firestore";
 import { db } from "../../firebase/firebase";
 import {
   Menu,
   MenuButton,
   MenuList,
   MenuItem,
-  Button,
   Text,
   Spinner,
   Alert,
   AlertIcon,
   Flex,
-  Tag,
-  CloseButton,
+  Badge,
+  Button,
 } from "@chakra-ui/react";
-import Title from "../utils/Title";
 
 const Notify = () => {
   const [loggedInUser, setLoggedInUser] = useState(null);
-  const [notifications, setNotifications] = useState([]);
+  const [notifications, setNotifications] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [read, setRead] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   // Fetch logged-in user from session storage
   useEffect(() => {
@@ -33,24 +31,33 @@ const Notify = () => {
     }
   }, []);
 
-  // Fetch notifications in real time using onSnapshot
+  // Fetch notifications and organize them by category
   useEffect(() => {
     if (!loggedInUser) return;
 
     const unsub = onSnapshot(
       collection(db, "notifications"),
       (snapshot) => {
-        const userNotifications = [];
+        const userNotifications = {};
 
         snapshot.forEach((doc) => {
           const data = doc.data();
-          Object.entries(data).forEach(([key, value]) => {
-            const emailKey = value.tenantEmail;
-            if (emailKey === loggedInUser) {
-              userNotifications.push({
-                name: key,
-                messages: value.messages,
-              });
+          Object.entries(data).forEach(([tenantName, details]) => {
+            if (details.tenantEmail === loggedInUser) {
+              Object.entries(details.categories || {}).forEach(
+                ([category, messages]) => {
+                  if (!userNotifications[category]) {
+                    userNotifications[category] = [];
+                  }
+                  messages.forEach((message) => {
+                    userNotifications[category].push({
+                      name: tenantName,
+                      message,
+                      read: message.read || false,
+                    });
+                  });
+                }
+              );
             }
           });
         });
@@ -64,16 +71,23 @@ const Notify = () => {
       }
     );
 
-    // Clean up the snapshot listener
-    return () => unsub();
+    return () => unsub(); // Clean up the listener
   }, [loggedInUser]);
 
+  // Calculate unread messages count
   useEffect(() => {
-    const unreadCount = notifications.reduce(
-      (acc, notif) => acc + notif.messages.filter((msg) => !msg.read).length,
+    const unread = Object.values(notifications).reduce(
+      (acc, categoryNotifs) =>
+        acc +
+        categoryNotifs.reduce((innerAcc, notif) => {
+          if (!notif.read) {
+            innerAcc++;
+          }
+          return innerAcc;
+        }, 0),
       0
     );
-    setRead(unreadCount);
+    setUnreadCount(unread);
   }, [notifications]);
 
   if (loading) {
@@ -88,81 +102,63 @@ const Notify = () => {
       </Alert>
     );
   }
-  const toggleReadStatus = async (notificationId, messageIndex) => {
-    // Toggle the read status of a message
-    setNotifications((prevNotifications) =>
-      prevNotifications.map((notif) => {
-        if (notif.id === notificationId) {
-          return {
-            ...notif,
-            messages: notif.messages.map((msg, idx) => {
-              if (idx === messageIndex) {
-                return { ...msg, read: !msg.read };
-              }
-              return msg;
-            }),
-          };
-        }
-        return notif;
-      })
-    );
+
+  const toggleReadStatus = async (category, notifIndex) => {
+    setNotifications((prevNotifications) => {
+      const updatedNotifications = { ...prevNotifications };
+      const categoryNotifs = updatedNotifications[category];
+
+      if (categoryNotifs && categoryNotifs[notifIndex]) {
+        // Toggle the read status
+        const updatedReadStatus = !categoryNotifs[notifIndex].read;
+        categoryNotifs[notifIndex].read = updatedReadStatus;
+ 
+      }
+
+      return updatedNotifications;
+    });
   };
 
-return (
-  <Menu variant={"solid"}>
-    <div className="">
-      <MenuButton as={"button"} className="">
+  return (
+    <Menu>
+      <MenuButton>
         <div className="relative">
           <a
             type="button"
             className="flex items-center justify-center p-3 rounded-lg text-lg shadow-lg bg-primary text-white hover:shadow-2xl hover:shadow-black active:scale-[0.8] ease-in-out duration-300"
           >
-            <i className="fa-sharp fa-regular fa-bell "></i>
+            <i className="fa-sharp fa-regular fa-bell"></i>
           </a>
 
-         
-                <div>
-                    <span className="absolute h-5 w-5 flex items-center justify-center top-0 right-0 -mt-2 -mr-2 px-1 text-xs font-semibold text-white bg-red-500 rounded-full">
-                      {read}
-                    </span> 
-                </div> 
+          {unreadCount > 0 && (
+            <span className="absolute h-5 w-5 flex items-center justify-center top-0 right-0 -mt-2 -mr-2 px-1 text-xs font-semibold text-white bg-red-500 rounded-full">
+              {unreadCount}
+            </span>
+          )}
         </div>
       </MenuButton>
-      <MenuList className="w-full p-4">
-        {notifications.length > 0 ? (
-          notifications.map((notification, index) => (
-            <div key={index}>
-              <Text className="text-lg font-bold text-primary pb-2 mb-2 border-b-2">
-                Messages ({notification.messages.length})
-              </Text>
-              {notification.messages.map((msg, idx) => (
-                <React.Fragment key={idx}>
-                  <MenuItem onClick={toggleReadStatus}>
-                    <Flex
-                      alignItems={"center"}
-                      justifyContent={"space-between"}
-                      gap={5}
-                    >
-                      <Text className="text-sm font-medium flex-shrink-0">
-                        {msg}
-                      </Text>
-                    </Flex>
-                  </MenuItem>
-                </React.Fragment>
-              ))}
-            </div>
-          ))
-        ) : (
-          <MenuItem>
-            <Text className="text-danger font-bold">
-              No notifications found
+      <MenuList className="p-3">
+        {Object.entries(notifications).map(([category, categoryNotifs]) => (
+          <div key={category}>
+            <Text fontWeight="bold" color="blue.500">
+              {category.charAt(0).toUpperCase() + category.slice(1)}
             </Text>
-          </MenuItem>
-        )}
+            {categoryNotifs.map((notif, index) => (
+              <MenuItem
+                key={index}
+                onClick={() => toggleReadStatus(category, index)}
+              >
+                <Flex justifyContent="space-between" alignItems="center" gap={15}>
+                  <Text>{notif.message}</Text>
+                  {!notif.read && <Badge colorScheme="red">Unread</Badge>}
+                </Flex>
+              </MenuItem>
+            ))}
+          </div>
+        ))}
       </MenuList>
-    </div>
-  </Menu>
-);
+    </Menu>
+  );
 };
 
 export default Notify;

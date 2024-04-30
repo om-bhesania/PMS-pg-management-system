@@ -117,6 +117,9 @@ const useGetData = () => {
           const masterTenantData = {
             ...tenantData,
             ...matchingTenantCred,
+            eleBill: tenantData.eleBill,
+            notifications: tenantData.notifications,
+            rentdue: tenantData.rentdue
           };
 
           // Check if the document already exists in MasterTenantsData
