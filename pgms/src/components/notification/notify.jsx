@@ -21,7 +21,13 @@ const Notify = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [unreadCount, setUnreadCount] = useState(0);
-
+  
+  const date = new Date();
+  date.setDate(date.getDate() + 7);
+ const formatDate = (date) => {
+   const options = { year: "numeric", month: "long", day: "numeric" , weekday: "long", hour: "numeric", minute: "numeric", second: "numeric",  timeZone: "Asia/Kolkata",};
+   return date.toLocaleDateString(undefined, options);
+ };
   // Fetch logged-in user from session storage
   useEffect(() => {
     const userData = sessionStorage.getItem("data");
@@ -112,7 +118,6 @@ const Notify = () => {
         // Toggle the read status
         const updatedReadStatus = !categoryNotifs[notifIndex].read;
         categoryNotifs[notifIndex].read = updatedReadStatus;
- 
       }
 
       return updatedNotifications;
@@ -131,15 +136,17 @@ const Notify = () => {
           </a>
 
           {unreadCount > 0 && (
-            <span className="absolute h-5 w-5 flex items-center justify-center top-0 right-0 -mt-2 -mr-2 px-1 text-xs font-semibold text-white bg-red-500 rounded-full">
+            <span
+              className={` absolute h-5 w-5 flex items-center justify-center top-0 right-0 -mt-2 -mr-2 px-1 text-xs font-semibold text-white bg-red-500 rounded-full`}
+            >
               {unreadCount}
             </span>
           )}
         </div>
       </MenuButton>
-      <MenuList className="p-3">
+      <MenuList className="p-3 max-h-[350px] overflow-y-auto space-y-1">
         {Object.entries(notifications).map(([category, categoryNotifs]) => (
-          <div key={category}>
+          <div key={category} className="space-y-2">
             <Text fontWeight="bold" color="blue.500">
               {category.charAt(0).toUpperCase() + category.slice(1)}
             </Text>
@@ -147,10 +154,20 @@ const Notify = () => {
               <MenuItem
                 key={index}
                 onClick={() => toggleReadStatus(category, index)}
+                className={` border border-primary/10 rounded-lg p-3 hover:bg-primary/10 transition-colors ease-in-out duration-300`}
               >
-                <Flex justifyContent="space-between" alignItems="center" gap={15}>
-                  <Text>{notif.message}</Text>
-                  {!notif.read && <Badge colorScheme="red">Unread</Badge>}
+                <Flex direction={"column"}>
+                  <Text fontSize="xs" color="gray.500">
+                    {formatDate(date)}
+                  </Text>
+                  <Flex
+                    justifyContent="space-between"
+                    alignItems="center"
+                    gap={15}
+                  >
+                    <Text>{notif.message}</Text>
+                    {!notif.read && <Badge colorScheme="red">Unread</Badge>}
+                  </Flex>
                 </Flex>
               </MenuItem>
             ))}

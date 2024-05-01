@@ -1,6 +1,6 @@
 import { Formik, Form, Field, ErrorMessage } from "formik";
 import * as Yup from "yup";
-import { Input, Button } from "@chakra-ui/react";
+import { Input, Button, cookieStorageManager } from "@chakra-ui/react";
 import { useToast } from "@chakra-ui/react";
 import { v4 as uuidv4 } from "uuid";
 import Title from "./../components/utils/Title";
@@ -11,13 +11,14 @@ import { collection, getDocs, query, where } from "firebase/firestore";
 import { db } from "../firebase/firebase";
 import useLoggedInUserData from "../hooks/useLoggedInUserData";
 import { useAuth } from "../components/authProvider";
-
+import {useCookies} from 'react-cookie';
 const Login = () => {
   const { tenantCreds, Role } = useGetData();
   const [emailInitial, setEmailInitial] = useState("");
   const [isLoggedIn, setIsLoggedIn] = useState();
   const [masterData, setMasterData] = useState();
   const { login } = useAuth();
+  const [ setCookie] = useCookies();
   const loggedInUserData = useLoggedInUserData(isLoggedIn, emailInitial);
   const validationSchema = Yup.object().shape({
     email: Yup.string().email("Invalid email").required("Email is required"),
@@ -50,7 +51,7 @@ const Login = () => {
           if (tenantData.email) {
             sessionStorage.setItem("email", email);
             sessionStorage.setItem("role", tenantData.role); 
-            sessionStorage.setItem("data", JSON.stringify(tenantData));
+            sessionStorage.setItem("data", JSON.stringify(tenantData));  
             setTimeout(() => {
               sessionStorage.clear();
             }, 60 * 60 * 1000);

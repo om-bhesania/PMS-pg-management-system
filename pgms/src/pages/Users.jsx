@@ -33,10 +33,10 @@ import useAddTenentCreds from "../hooks/addTenent";
 import Breadcrumbs from "../components/utils/breadcrumbs";
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "../firebase/firebase";
+import AddRoom from "../components/addRoom";
 const Users = () => {
   const { addTenants } = useAddData();
-  const { loading, tenants, error, mergeTenantData } =
-    useGetData();
+  const { loading, tenants, error, mergeTenantData } = useGetData();
   const { modifyData } = useModifyData();
   const { deleteData } = useDeleteData();
   const { addTenentCreds } = useAddTenentCreds();
@@ -49,7 +49,7 @@ const Users = () => {
       tenantEmail: "",
       tenantRoom: "",
       tenantStay: "",
-      tenantRent: "",
+      tenantRent: "", 
     },
     validate: (values) => {
       let errors = {};
@@ -76,11 +76,27 @@ const Users = () => {
       if (!values.tenantRent) {
         errors.tenantRent = "tenant Rent Amount Is Missing or is Incorrect";
       }
+      if (!values.room) {
+        errors.tenantRent =
+          "this field cant be empty please enter a valid room number";
+      }
+      if (!values.beds) {
+        errors.tenantRent =
+          "this field cant be empty please enter valid total beds";
+      }
+      if (!values.inmates) {
+        errors.tenantRent =
+          "this field cant be empty please enter a valid total inmates";
+      }
       return errors;
     },
     onSubmit: async (values) => {
       try {
-        const docId = await addTenants(values);
+        const allValues = {
+          ...values,
+          avalability: false,
+        };
+        const docId = await addTenants(allValues);
         const examplePromise = new Promise((resolve, reject) => {
           if (docId) setTimeout(() => resolve(200), 3000);
           if (!docId) setTimeout(() => reject(200), 3000);
@@ -290,6 +306,13 @@ const Users = () => {
           >
             <Title>Add tenants</Title>
           </Tab>
+          <Tab
+            _selected={{
+              background: "#E6F4F1",
+            }}
+          >
+            <Title>Add Room</Title>
+          </Tab>
         </TabList>
         <TabPanels>
           <TabPanel>
@@ -423,7 +446,10 @@ const Users = () => {
             </Modal>
           </TabPanel>
           <TabPanel>
-            <form className="p-6 text-primary rounded-lg shadow-lg" onSubmit={formik.handleSubmit}>
+            <form
+              className="p-6 text-primary rounded-lg shadow-lg"
+              onSubmit={formik.handleSubmit}
+            >
               <div className="grid grid-cols-2 gap-5">
                 <div className="flex-1">
                   <div className="name flex flex-col w-full mb-6">
@@ -565,6 +591,10 @@ const Users = () => {
                 Submit
               </button>
             </form>
+          </TabPanel>
+          <TabPanel>
+            <Title customClass={"mb-4"}>Add Room</Title>
+            <AddRoom />
           </TabPanel>
         </TabPanels>
       </Tabs>

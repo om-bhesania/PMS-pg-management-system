@@ -1,33 +1,68 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Dashboard from "./pages/Dashboard";
+import { BrowserRouter, Routes, Route, useNavigate } from "react-router-dom";
+import { createContext, useEffect, useState } from "react";
+import { collection, query, where, getDocs } from "firebase/firestore";
+import { db } from "./firebase/firebase"; // Ensure you've initialized Firebase
 import Sidebar, { Logout } from "./components/sidebar/Sidebar";
+import Dashboard from "./pages/Dashboard";
 import Users from "./pages/Users";
 import Electricitybill from "./pages/Electricitybill";
 import Rentdue from "./pages/Rentdue";
 import Otherexpenses from "./pages/Otherexpenses";
 import Login from "./pages/Login";
 import ProtectedRoute from "./components/Login/auth";
-import { useEffect, useState } from "react";
-import Title from "./components/utils/Title";
-import Button from "./components/utils/Button";
-import useGetData from "./hooks/getData";
 import { AuthProvider } from "./components/authProvider";
-import Notify from './components/notification/notify';
+import Notify from "./components/notification/notify";
 import TempPassGen from "./pages/tempPassGen";
 import ShowBills from "./pages/showBills";
 import ShowRentDue from "./pages/ShowRentDue";
-
+import Profile from "./pages/Profile"; // New Profile component
+import Button from "./components/utils/Button";
+import Title from "./components/utils/Title";
+import useGetData from "./hooks/getData";
+ 
 function App() {
-  const [isLoggedIn, setIsLoggedIn] = useState(localStorage.getItem("token"));
+  const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem("token"));
+  const { email, password } = Login();
+  const { tenantCreds, masterData, Role, mergeTenantData } = useGetData();
+  const [currentEmail, setCurrentEmail] = useState(
+    sessionStorage.getItem("email")
+  );
+  const [tenantName, setTenantName] = useState(null);
+
+  useEffect(() => {
+    const fetchTenantName = async (email) => {
+      try {
+        // Query the tenants collection to find the name for the current email
+        const q = query(
+          collection(db, "tenants"),
+          where("tenantEmail", "==", email)
+        );
+        const querySnapshot = await getDocs(q);
+
+        if (querySnapshot.empty) {
+          console.error("No tenant found with the provided email.");
+        } else {
+          const tenantDoc = querySnapshot.docs[0]; // Assuming only one tenant per email
+          const tenantData = tenantDoc.data();
+          setTenantName(tenantData.tenantName);
+        }
+      } catch (error) {
+        console.error("Error fetching tenant name:", error);
+      }
+    };
+
+    if (currentEmail) {
+      fetchTenantName(currentEmail);
+    }
+  }, [currentEmail]);
   const [currentUser, setCurrentUser] = useState("");
 
   const getCurrentUserInfo = () => {
     const CurrentUserInfo = sessionStorage.getItem("email");
     setCurrentUser(CurrentUserInfo);
   };
-  const { email, password } = Login();
-  const { tenantCreds, masterData, Role, mergeTenantData } = useGetData();
-  useEffect(() => { 
+
+  useEffect(() => {
     if (isLoggedIn) {
       setCurrentUser(sessionStorage.getItem("role"));
     }
@@ -102,7 +137,6 @@ function App() {
                   <Route
                     path="/electricitybill"
                     element={<ProtectedRoute component={Electricitybill} />}
-
                   />
                   <Route
                     path="/rentdue"
@@ -111,6 +145,10 @@ function App() {
                   <Route
                     path="/otherexpenses"
                     element={<ProtectedRoute component={Otherexpenses} />}
+                  />
+                  <Route
+                    path="/profile/:name"
+                    element={<ProtectedRoute component={Profile} />} // Dynamic route
                   />
                 </>
               )}

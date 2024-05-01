@@ -41,6 +41,7 @@ const ShowRentDue = ({ values }) => {
   const [roomTenants, setRoomTenants] = useState([]);
   const [updating, setUpdating] = useState(false);
   const [category, setCategory] = useState();
+  const [date, setDate] = useState();
 
   const handlePaymentStatusChange = async (billId, newStatus) => {
     setUpdating(true);
@@ -120,91 +121,90 @@ const ShowRentDue = ({ values }) => {
     });
   });
 
-const sendNotification = async (roomNumber, amount) => {
-  try {
-    const currentMonth = new Date().toLocaleString("default", {
-      month: "long",
-    });
-    const notificationMessage = `Due amount for the month of ${currentMonth} is ₹${amount}`;
-    const room = roomTenants.find((r) => r.roomNumber === roomNumber);
+  const sendNotification = async (roomNumber, amount) => {
+    try {
+      const currentMonth = new Date().toLocaleString("default", {
+        month: "long",
+      });
+      const notificationMessage = `Due amount for the month of ${currentMonth} is ₹${amount}`;
+      const room = roomTenants.find((r) => r.roomNumber === roomNumber);
 
-    if (!room) {
-      throw new Error(`Room with number ${roomNumber} not found`);
-    }
-
-    const tenantNotifications = room.tenants.reduce((acc, tenant) => {
-      const tenantKey = tenant.tenantName.split(" ")[0];
-      if (!acc[tenantKey]) {
-        acc[tenantKey] = {
-          tenantContact: tenant.tenantContact,
-          tenantEmail: tenant.tenantEmail,
-          categories: {}, // Initialize categories if not present
-        };
+      if (!room) {
+        throw new Error(`Room with number ${roomNumber} not found`);
       }
-      return acc;
-    }, {});
 
-    // Ensure category is defined before using it
-    if (typeof category === "undefined" || category === "") {
-      throw new Error("Category is not defined or is empty.");
-    }
-
-    // Add or update the category with the message
-    for (const [key, value] of Object.entries(tenantNotifications)) {
-      if (!value.categories[category]) {
-        value.categories[category] = []; // Initialize category if not present
-      }
-      value.categories[category].push(notificationMessage); // Add the message
-    }
-
-    const roomDocRef = doc(db, "notifications", room.roomNumber);
-    const roomDocSnap = await getDoc(roomDocRef);
-
-    if (roomDocSnap.exists()) {
-      const existingData = roomDocSnap.data();
-
-      // Update existing data with new tenant notifications
-      for (const [key, newNotification] of Object.entries(
-        tenantNotifications
-      )) {
-        if (existingData[key]) {
-          const existingCategories = existingData[key].categories;
-
-          // Append to existing category if it exists, else create a new one
-          if (!existingCategories[category]) {
-            existingCategories[category] = [];
-          }
-          existingCategories[category].push(notificationMessage);
-        } else {
-          // Add new tenant if they don't exist in the data
-          existingData[key] = newNotification;
+      const tenantNotifications = room.tenants.reduce((acc, tenant) => {
+        const tenantKey = tenant.tenantName.split(" ")[0];
+        if (!acc[tenantKey]) {
+          acc[tenantKey] = {
+            tenantContact: tenant.tenantContact,
+            tenantEmail: tenant.tenantEmail,
+            categories: {},
+          };
         }
+        return acc;
+      }, {});
+
+      // Ensure category is defined before using it
+      if (typeof category === "undefined" || category === "") {
+        throw new Error("Category is not defined or is empty.");
       }
 
-      await updateDoc(roomDocRef, existingData); // Update the document
-    } else {
-      await setDoc(roomDocRef, tenantNotifications); // Create new document
+      // Add or update the category with the message
+      for (const [key, value] of Object.entries(tenantNotifications)) {
+        if (!value.categories[category]) {
+          value.categories[category] = []; // Initialize category if not present
+        }
+        value.categories[category].push(notificationMessage); // Add the message
+      }
+
+      const roomDocRef = doc(db, "notifications", room.roomNumber);
+      const roomDocSnap = await getDoc(roomDocRef);
+
+      if (roomDocSnap.exists()) {
+        const existingData = roomDocSnap.data();
+
+        // Update existing data with new tenant notifications
+        for (const [key, newNotification] of Object.entries(
+          tenantNotifications
+        )) {
+          if (existingData[key]) {
+            const existingCategories = existingData[key].categories;
+
+            // Append to existing category if it exists, else create a new one
+            if (!existingCategories[category]) {
+              existingCategories[category] = [];
+            }
+            existingCategories[category].push(notificationMessage);
+          } else {
+            // Add new tenant if they don't exist in the data
+            existingData[key] = newNotification;
+          }
+        }
+
+        await updateDoc(roomDocRef, existingData); // Update the document
+      } else {
+        await setDoc(roomDocRef, tenantNotifications); // Create new document
+      }
+
+      toast({
+        title: "Success",
+        description: "Notification(s) sent successfully.",
+        status: "success",
+        duration: 3000,
+        isClosable: true,
+      });
+    } catch (error) {
+      console.error("Error sending notification:", error);
+      toast({
+        title: "Error",
+        description: "Something went wrong. Please try again later.",
+        status: "error",
+        duration: 3000,
+        isClosable: true,
+      });
     }
-
-    toast({
-      title: "Success",
-      description: "Notification(s) sent successfully.",
-      status: "success",
-      duration: 3000,
-      isClosable: true,
-    });
-  } catch (error) {
-    console.error("Error sending notification:", error);
-    toast({
-      title: "Error",
-      description: "Something went wrong. Please try again later.",
-      status: "error",
-      duration: 3000,
-      isClosable: true,
-    });
-  }
-};
-
+  };
 
   // Group bills by room number
   const roomBillGroups = rentDue.reduce((acc, bill) => {

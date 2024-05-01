@@ -1,4 +1,4 @@
-const Title = ({ children, size, customClass, customSize, colorTheme , ps = true }) => {
+const Title = ({ children, size, customClass, customSize, colorTheme , ps = false }) => {
   const baseStyle =
     "font-bold text-primaryDark  font-primary text-primary bg-transparent";
   const color = {

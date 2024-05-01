@@ -12,13 +12,14 @@ const Dashboard = () => {
       <section className="dashboard">
         <div className="container">
           <div className="upper-cards-info flex gap-5 max-h-[150px] flex-wrap">
-            <div className="flex-1 rounded-lg flex flex-col items-center p-6 px-10 shadow-lg bg-bgBlue">
+            <div className="flex-1 rounded-lg flex flex-col justify-center items-center p-6 px-10 shadow-lg bg-bgBlue">
               <Title size={"lg"}>Total Pg</Title>
               <Title
                 size={"custom"}
                 customClass={"font-secondary"}
                 colorTheme={"primary"}
                 customSize={"text-5xl"}
+                ps={"false"}
               >
                 1
               </Title>
@@ -28,6 +29,7 @@ const Dashboard = () => {
                 size={"lg"}
                 colorTheme={"primary"}
                 customClass={"whitespace-nowrap"}
+                ps={"false"}
               >
                 Available Rooms
               </Title>
@@ -36,12 +38,13 @@ const Dashboard = () => {
                 customClass={"font-secondary"}
                 colorTheme={"primary"}
                 customSize={"text-5xl"}
+                ps={"false"}
               >
                 2
               </Title>
             </div>
             <div className="flex-1 rounded-lg flex flex-col items-center p-6 px-10 shadow-lg bg-bgPurple">
-              <Title size={"lg"} colorTheme={"primary"}>
+              <Title size={"lg"} colorTheme={"primary"} ps={"false"}>
                 Total Rooms
               </Title>
               <Title
@@ -49,8 +52,9 @@ const Dashboard = () => {
                 customClass={"font-secondary"}
                 colorTheme={"primary"}
                 customSize={"text-5xl"}
+                ps={"false"}
               >
-                5
+                {tenants.map((tenant) => tenant.roomNo).length}
               </Title>
             </div>
             <div className="flex-1 rounded-lg flex flex-col items-center p-6 px-10 shadow-lg bg-bgRed  ">
@@ -60,6 +64,7 @@ const Dashboard = () => {
                 customClass={"font-secondary"}
                 colorTheme={"primary"}
                 customSize={"text-5xl"}
+                ps={"false"}
               >
                 {loading ? (
                   <SpinnerComponent />
@@ -81,7 +86,9 @@ const Dashboard = () => {
           <div className="latest-info flex flex-col">
             <div className="my-10" />
             <div className="flex p-6 rounded-lg outline-2 outline-primary outline">
-
+              <Title size={"lg"} colorTheme={"primary"}>
+                Latest Tenants
+              </Title> 
             </div>
           </div>
         </div>
