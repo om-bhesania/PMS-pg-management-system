@@ -36,82 +36,78 @@ const Profile = () => {
   const [isLoading, setIsLoading] = useState(true);
   const toast = useToast();
 
-  useEffect(() => {
-    const fetchProfileData = async () => {
-      try {
-        const currentEmail = sessionStorage.getItem("email");
+useEffect(() => {
+  const fetchProfileData = async () => {
+    try {
+      const currentEmail = sessionStorage.getItem("email");
 
-        if (!currentEmail) {
-          throw new Error("No email found in sessionStorage.");
-        }
-
-        // Fetch tenant information using current email
-        const tenantQuery = query(
-          collection(db, "tenants"),
-          where("tenantEmail", "==", currentEmail)
-        );
-        const tenantSnapshot = await getDocs(tenantQuery);
-
-        if (tenantSnapshot.empty) {
-          throw new Error("No tenant found with the provided email.");
-        }
-
-        const tenantData = tenantSnapshot.docs[0].data();
-        setTenantInfo(tenantData);
-
-        const roomNumber = tenantData.tenantRoom;
-
-        // Fetch room information based on tenant's room number
-        const roomQuery = query(
-          collection(db, "rooms"),
-          where("room", "==", roomNumber)
-        );
-        const roomSnapshot = await getDocs(roomQuery);
-
-        if (!roomSnapshot.empty) {
-          setRoomInfo(roomSnapshot.docs[0]?.data());
-        }
-
-        // Fetch rent due information based on room number
-        const rentDueQuery = query(
-          collection(db, "rentdue"),
-          where("roomNumber", "==", roomNumber)
-        );
-        const rentDueSnapshot = await getDocs(rentDueQuery);
-        setRentDue(rentDueSnapshot.docs.map((doc) => doc.data()));
-
-        // Fetch electricity bill information based on room number
-        const eleBillQuery = query(
-          collection(db, "eleBill"),
-          where("roomNumber", "==", roomNumber)
-        );
-        const eleBillSnapshot = await getDocs(eleBillQuery);
-        setEleBill(eleBillSnapshot.docs.map((doc) => doc.data()));
-
-        // Fetch notifications based on room number
-        const notificationQuery = query(
-          collection(db, "notifications"),
-          where("roomNumber", "==", roomNumber)
-        );
-        const notificationSnapshot = await getDocs(notificationQuery);
-        setNotifications(notificationSnapshot.docs.map((doc) => doc.data()));
-
-        setIsLoading(false);
-      } catch (error) {
-        toast({
-          title: "Error fetching profile data",
-          description:
-            error.message || "An error occurred while fetching profile data.",
-          status: "error",
-          duration: 5000,
-          isClosable: true,
-        });
-        setIsLoading(false);
+      if (!currentEmail) {
+        throw new Error("No email found in sessionStorage.");
       }
-    };
 
-    fetchProfileData();
-  }, [toast]);
+      const tenantQuery = query(
+        collection(db, "tenants"),
+        where("tenantEmail", "==", currentEmail)
+      );
+      const tenantSnapshot = await getDocs(tenantQuery);
+
+      if (tenantSnapshot.empty) {
+        throw new Error("No tenant found with the provided email.");
+      }
+
+      const tenantData = tenantSnapshot.docs[0].data();
+      setTenantInfo(tenantData);
+
+      const roomNumber = tenantData.tenantRoom;
+
+      const rentDueQuery = query(
+        collection(db, "rentdue"),
+        where("roomNumber", "==", roomNumber)
+      );
+      const rentDueSnapshot = await getDocs(rentDueQuery);
+      const filteredRentDue = rentDueSnapshot.docs
+        .map((doc) => doc.data())
+        .filter((rent) => isBillDue(rent.dueDate));
+
+      setRentDue(filteredRentDue);
+
+      const eleBillQuery = query(
+        collection(db, "eleBill"),
+        where("roomNumber", "==", roomNumber)
+      );
+      const eleBillSnapshot = await getDocs(eleBillQuery);
+      const filteredEleBill = eleBillSnapshot.docs
+        .map((doc) => doc.data())
+        .filter((bill) => isBillDue(bill.dueDate));
+
+      setEleBill(filteredEleBill);
+
+      setIsLoading(false);
+    } catch (error) {
+      toast({
+        title: "Error fetching profile data",
+        description:
+          error.message || "An error occurred while fetching profile data.",
+        status: "error",
+        duration: 5000,
+        isClosable: true,
+      });
+      setIsLoading(false);
+    }
+  };
+
+  fetchProfileData();
+}, [toast]);
+  
+
+  const isBillDue = (dueDate) => {
+    const today = new Date();
+    const due = new Date(dueDate);
+    const differenceInTime = due.getTime() - today.getTime();
+    const daysDifference = differenceInTime / (1000 * 3600 * 24);
+    return daysDifference <= 7;
+  };
+
 
   return (
     <Box p={6} className="bg-white rounded-lg shadow-lg">
@@ -124,7 +120,7 @@ const Profile = () => {
               </Heading>
 
               {/* Room Information */}
-              <StatGroup className="bg-secondary p-4 rounded-lg shadow-md">
+              <StatGroup className=" p-4 rounded-lg shadow-md">
                 <Stat>
                   <StatLabel>Room Number</StatLabel>
                   <StatNumber>{tenantInfo.tenantRoom}</StatNumber>
@@ -138,10 +134,7 @@ const Profile = () => {
               <Heading as="h2" size="lg" className="text-primary">
                 Rent Due
               </Heading>
-              <List
-                spacing={3}
-                className="bg-secondary p-4 rounded-lg shadow-md"
-              >
+              <List spacing={3} className=" p-4 rounded-lg shadow-md">
                 {rentDue.length === 0 ? (
                   <ListItem>
                     <Badge
@@ -149,7 +142,6 @@ const Profile = () => {
                       colorScheme="blue"
                       px={"50px"}
                       py={"10px"}
-                      fontSize={16}
                     >
                       No rent due
                     </Badge>
@@ -172,10 +164,7 @@ const Profile = () => {
                 <Heading as="h3" size="md" className="text-primary">
                   Electricity Bills
                 </Heading>
-                <List
-                  spacing={3}
-                  className="bg-secondary p-4 rounded-lg shadow-md"
-                >
+                <List spacing={3} className=" p-4 rounded-lg shadow-md">
                   {eleBill.length === 0 ? (
                     <ListItem>
                       <Badge

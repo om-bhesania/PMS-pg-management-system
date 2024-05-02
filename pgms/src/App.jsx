@@ -1,4 +1,10 @@
-import { BrowserRouter, Routes, Route, useNavigate } from "react-router-dom";
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  useNavigate,
+  Link,
+} from "react-router-dom";
 import { createContext, useEffect, useState } from "react";
 import { collection, query, where, getDocs } from "firebase/firestore";
 import { db } from "./firebase/firebase"; // Ensure you've initialized Firebase
@@ -19,15 +25,19 @@ import Profile from "./pages/Profile"; // New Profile component
 import Button from "./components/utils/Button";
 import Title from "./components/utils/Title";
 import useGetData from "./hooks/getData";
- 
+import SpinnerComponent from "./components/Spinner";
+import { Spinner } from "@chakra-ui/react";
+
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem("token"));
   const { email, password } = Login();
-  const { tenantCreds, masterData, Role, mergeTenantData } = useGetData();
+  const { tenantCreds, masterData, Role, mergeTenantData, loading, error } =
+    useGetData();
   const [currentEmail, setCurrentEmail] = useState(
     sessionStorage.getItem("email")
   );
-  const [tenantName, setTenantName] = useState(null);
+  const [tenantName, setTenantName] = useState("");
+  const [name, setName] = useState("");
 
   useEffect(() => {
     const fetchTenantName = async (email) => {
@@ -45,6 +55,7 @@ function App() {
           const tenantDoc = querySnapshot.docs[0]; // Assuming only one tenant per email
           const tenantData = tenantDoc.data();
           setTenantName(tenantData.tenantName);
+          setName(tenantData.tenantName.split(" ")[0]);
         }
       } catch (error) {
         console.error("Error fetching tenant name:", error);
@@ -80,7 +91,9 @@ function App() {
                   <Title size={"xl"}>Pg Management Dashboard</Title>
                   <div className="flex gap-1 capitalize text-xl text-gray-5  00 font-medium tracking-[-1.5px]">
                     <span className="inline-block">Welcome</span>
-                    <span className="inline-block">{currentUser}</span>
+                    <span className="inline-block">
+                      {loading ? <Spinner size={"md"} /> : name}
+                    </span>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
@@ -88,21 +101,18 @@ function App() {
                     <>
                       <Notify />
                       <Logout />
-                      {currentUser ? (
+                      {name ? (
                         <>
-                          <div
-                            className="flex items-center justify-center cursor-pointer p-3 rounded-lg text-lg hover:shadow-2xl hover:shadow-black shadow-lg bg-transparent border-2 border-primary h-[42px] w-[42px] text-primary active:scale-[0.8] ease-in-out duration-300"
-                            onClick={() => {
-                              window.localStorage.clear();
-                              window.location.href = "/";
-                              window.location.reload();
-                              window.sessionStorage.clear();
-                            }}
+                          <Link
+                            className="flex items-center justify-center cursor-pointer p-3 rounded-lg text-lg font-bold hover:shadow-2xl hover:shadow-black shadow-lg bg-transparent border-2 border-primary h-[42px] w-[42px] text-primary active:scale-[0.8] ease-in-out duration-300"
+                            to={`/profile/${name}`}
                           >
-                            {currentUser
-                              .split(" ")
-                              .map((word) => word.charAt(0).toUpperCase())}
-                          </div>
+                            {loading ? (
+                              <Spinner size={"md"} />
+                            ) : (
+                              name.split("")[0]
+                            )}
+                          </Link>
                         </>
                       ) : null}
                     </>

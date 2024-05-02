@@ -22,11 +22,13 @@ import {
   FormLabel,
   Input,
   useDisclosure,
+  Select,
+  Spinner,
 } from "@chakra-ui/react";
 import { useFormik } from "formik";
 import useAddData from "../hooks/addData";
 import useGetData from "../hooks/getData";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import useModifyData from "../hooks/modifyData";
 import useDeleteData from "../hooks/deleteData";
 import useAddTenentCreds from "../hooks/addTenent";
@@ -36,11 +38,12 @@ import { db } from "../firebase/firebase";
 import AddRoom from "../components/addRoom";
 const Users = () => {
   const { addTenants } = useAddData();
-  const { loading, tenants, error, mergeTenantData } = useGetData();
+  const { loading, tenants, error, mergeTenantData, rooms } = useGetData();
   const { modifyData } = useModifyData();
   const { deleteData } = useDeleteData();
   const { addTenentCreds } = useAddTenentCreds();
   const { isOpen, onOpen, onClose } = useDisclosure();
+  const [dataAdding, setDataAdding] = useState(false);
   const toast = useToast();
   const formik = useFormik({
     initialValues: {
@@ -49,7 +52,7 @@ const Users = () => {
       tenantEmail: "",
       tenantRoom: "",
       tenantStay: "",
-      tenantRent: "", 
+      tenantRent: "",
     },
     validate: (values) => {
       let errors = {};
@@ -76,21 +79,10 @@ const Users = () => {
       if (!values.tenantRent) {
         errors.tenantRent = "tenant Rent Amount Is Missing or is Incorrect";
       }
-      if (!values.room) {
-        errors.tenantRent =
-          "this field cant be empty please enter a valid room number";
-      }
-      if (!values.beds) {
-        errors.tenantRent =
-          "this field cant be empty please enter valid total beds";
-      }
-      if (!values.inmates) {
-        errors.tenantRent =
-          "this field cant be empty please enter a valid total inmates";
-      }
       return errors;
     },
     onSubmit: async (values) => {
+      setDataAdding(true);
       try {
         const allValues = {
           ...values,
@@ -126,6 +118,8 @@ const Users = () => {
           duration: 5000,
           isClosable: true,
         });
+      } finally {
+        setTimeout(() => setDataAdding(false), 3000);
       }
     },
   });
@@ -286,6 +280,35 @@ const Users = () => {
     setSelectedTenantId(tenantId);
     fetchTenantCreds(tenantId);
   };
+
+  const [availableRooms, setAvailableRooms] = useState([]); // State to hold filtered rooms
+
+  useEffect(() => {
+    if (!loading) {
+      // Count the number of tenants per room
+      const tenantCounts = tenants.reduce((acc, tenant) => {
+        const room = tenant.tenantRoom;
+        if (room in acc) {
+          acc[room] += 1;
+        } else {
+          acc[room] = 1;
+        }
+        return acc;
+      }, {});
+
+      const filteredRooms = rooms
+        .map((room) => {
+          const inmates = tenantCounts[room.room] || 0; // Get the current number of tenants in the room
+          const availableBeds = room.beds - inmates; // Calculate available beds
+          return { ...room, availableBeds }; // Return room with available beds
+        })
+        .filter((room) => room.availableBeds > 0); // Only include rooms with at least one available bed
+
+      setAvailableRooms(filteredRooms); // Update the state with filtered rooms
+ 
+      setAvailableRooms(filteredRooms);
+    }
+  }, [loading , rooms, tenants]);
 
   return (
     <div className="">
@@ -541,25 +564,30 @@ const Users = () => {
                     ) : null}
                   </div>
                   <div className="room-number flex flex-col w-full mb-6">
-                    <label className="font-medium mb-2 text-sm">
-                      <i className="fa-regular fa-person-booth"></i> tenant Room
-                      number
-                    </label>
-                    <input
-                      type="number"
-                      placeholder="Enter Room Number"
-                      name="tenantRoom"
-                      autoFocus
-                      className="border border-gray-400 focus:border-secondary focus:border-2 rounded-lg p-3 max-w-full"
-                      onChange={formik.handleChange}
-                      onBlur={formik.handleBlur}
-                      value={formik.values.tenantRoom}
-                    />
-                    {formik.touched.tenantRoom && formik.errors.tenantRoom ? (
-                      <div className="text-red-500 text-sm font-semibold">
-                        {formik.errors.tenantRoom}
-                      </div>
-                    ) : null}
+                    <FormControl>
+                      <FormLabel>Tenant Room</FormLabel>
+                      <Skeleton isLoaded={!loading}>
+                        <Select
+                          placeholder="Select Room"
+                          name="tenantRoom"
+                          onChange={formik.handleChange}
+                          onBlur={formik.handleBlur}
+                          value={formik.values.tenantRoom} // Bind to formik
+                          isDisabled={loading} // Disable if data is still loading
+                        >
+                          {availableRooms.map((room) => (
+                            <option key={room.id} value={room.room}>
+                              Room {room.room} - {room.availableBeds} available
+                            </option>
+                          ))}
+                        </Select>
+                      </Skeleton>
+                      {formik.touched.tenantRoom && formik.errors.tenantRoom ? (
+                        <div className="text-red-500 text-sm font-semibold">
+                          {formik.errors.tenantRoom}
+                        </div>
+                      ) : null}
+                    </FormControl>
                   </div>
                   <div className="Rent flex flex-col w-full mb-6 mt-8">
                     <label className="font-medium mb-2 text-sm flex gap-2">
@@ -585,8 +613,9 @@ const Users = () => {
                 </div>
               </div>
               <button
-                className="cursor-pointer py-2 px-6 rounded font-medium text-lg text-center transition duration-300 bg-primary text-white hover:outline-primary hover:outline hover:text-primary hover:bg-transparent self-end"
+                className="cursor-pointer py-2 px-6 rounded font-medium disabled:cursor-not-allowed text-lg text-center transition duration-300 bg-primary text-white hover:outline-primary hover:outline hover:text-primary hover:bg-transparent self-end"
                 type="submit"
+                disabled={dataAdding}
               >
                 Submit
               </button>

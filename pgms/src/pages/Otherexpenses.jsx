@@ -168,9 +168,9 @@ const OtherExpenses = () => {
     <Box p={6} className="bg-white rounded-xl shadow-lg">
       {/* Form for adding/editing expenses */}
       <form onSubmit={formik.handleSubmit}>
-        <div className="grid grid-cols-2 gap-6">
+        <div className="grid grid-cols-2 col-gap-3">
           {/* Description Field */}
-          <div className="flex flex-col w-full mb-6">
+          <div className="flex flex-col w-full">
             <FormLabel>Description</FormLabel>
             <Input
               type="text"
@@ -188,7 +188,7 @@ const OtherExpenses = () => {
           </div>
 
           {/* Amount Field */}
-          <div className="flex flex-col w-full mb-6">
+          <div className="flex flex-col w-full mb-3">
             <FormLabel>Amount</FormLabel>
             <Input
               type="number"
@@ -206,7 +206,7 @@ const OtherExpenses = () => {
           </div>
 
           {/* Category Field with Icon */}
-          <div className="flex flex-col w-full mb-6">
+          <div className="flex flex-col w-full mb-3">
             <FormLabel>Category</FormLabel>
             <Select
               name="category"
@@ -229,7 +229,7 @@ const OtherExpenses = () => {
           </div>
 
           {/* Tenant Dropdown */}
-          <div className="flex flex-col w-full mb-6">
+          <div className="flex flex-col w-full mb-3">
             <FormLabel>Assign to Tenant (optional)</FormLabel>
             <Skeleton isLoaded={!loadingTenants}>
               <Select

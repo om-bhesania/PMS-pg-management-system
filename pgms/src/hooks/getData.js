@@ -14,6 +14,7 @@ const useGetData = () => {
   const [tenants, setTenants] = useState([]);
   const [tenantCreds, setTenantCreds] = useState([]);
   const [masterData, setMasterData] = useState([]);
+  const [rooms, setRooms] = useState([]);
   const [Role, setRole] = useState(null);
 
   // Fetch and listen for tenants data
@@ -119,7 +120,7 @@ const useGetData = () => {
             ...matchingTenantCred,
             eleBill: tenantData.eleBill,
             notifications: tenantData.notifications,
-            rentdue: tenantData.rentdue
+            rentdue: tenantData.rentdue,
           };
 
           // Check if the document already exists in MasterTenantsData
@@ -146,12 +147,36 @@ const useGetData = () => {
     }
   };
 
+  // Fetch and listen for rooms
+  useEffect(() => {
+    const roomsCollectionRef = collection(db, "rooms");
+    const unsubscribe = onSnapshot(
+      roomsCollectionRef,
+      (querySnapshot) => {
+        const data = querySnapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+        setRooms(data);
+      },
+      (snapshotError) => {
+        console.error("Error fetching tenant credentials:", snapshotError);
+        setError(snapshotError);
+      }
+    );
+
+    return () => {
+      unsubscribe();
+    };
+  }, []);
+
   return {
     loading,
     error,
     tenants,
     tenantCreds,
     masterData,
+    rooms,
     Role,
     mergeTenantData,
   };

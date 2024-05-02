@@ -169,12 +169,15 @@ const sendNotification = async (roomNumber, amount) => {
       throw new Error("Category is not defined or is empty.");
     }
 
-    // Add or update the category with the message
+    // Add or update the category with the message and createAt
     for (const [key, value] of Object.entries(tenantNotifications)) {
       if (!value.categories[category]) {
         value.categories[category] = []; // Initialize category if not present
       }
-      value.categories[category].push(notificationMessage); // Add the message
+      value.categories[category].push({
+        message: notificationMessage,
+        createdAt: new Date().toISOString(), // Store the current date and time
+      }); // Add the message and createdAt
     }
 
     const roomDocRef = doc(db, "notifications", room.roomNumber);
@@ -194,7 +197,10 @@ const sendNotification = async (roomNumber, amount) => {
           if (!existingCategories[category]) {
             existingCategories[category] = [];
           }
-          existingCategories[category].push(notificationMessage);
+          existingCategories[category].push({
+            message: notificationMessage,
+            createdAt: new Date().toISOString(), // Store the current date and time
+          });
         } else {
           // Add new tenant if they don't exist in the data
           existingData[key] = newNotification;

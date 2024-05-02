@@ -14,6 +14,7 @@ import {
   Badge,
   Button,
 } from "@chakra-ui/react";
+import { redirect } from "react-router-dom";
 
 const Notify = ({ onlyNotification = false }) => {
   const [loggedInUser, setLoggedInUser] = useState(null);
@@ -21,6 +22,7 @@ const Notify = ({ onlyNotification = false }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [name, setName] = useState("");
 
   const date = new Date();
   date.setDate(date.getDate() + 7);
@@ -57,6 +59,7 @@ const Notify = ({ onlyNotification = false }) => {
 
         snapshot.forEach((doc) => {
           const data = doc.data();
+          setName(data);
           Object.entries(data).forEach(([tenantName, details]) => {
             if (details.tenantEmail === loggedInUser) {
               Object.entries(details.categories || {}).forEach(
@@ -76,6 +79,7 @@ const Notify = ({ onlyNotification = false }) => {
             }
           });
         });
+        console.log(name);
 
         setNotifications(userNotifications);
         setLoading(false);
@@ -166,7 +170,9 @@ const Notify = ({ onlyNotification = false }) => {
                     {categoryNotifs.map((notif, index) => (
                       <MenuItem
                         key={index}
-                        onClick={() => toggleReadStatus(category, index)}
+                        onClick={() => {
+                          toggleReadStatus(category, index)
+                        }}
                         className={` border border-primary/10 rounded-lg p-3 hover:bg-primary/10 transition-colors ease-in-out duration-300`}
                       >
                         <Flex direction={"column"}>
