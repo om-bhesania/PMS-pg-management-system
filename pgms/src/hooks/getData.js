@@ -12,6 +12,9 @@ const useGetData = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [tenants, setTenants] = useState([]);
+  const [eleBill, setEleBill] = useState([]);
+  const [rentdue, setRentdue] = useState([]);
+  const [expenseTracker, setExpenseTracker] = useState([]);
   const [tenantCreds, setTenantCreds] = useState([]);
   const [masterData, setMasterData] = useState([]);
   const [rooms, setRooms] = useState([]);
@@ -169,7 +172,71 @@ const useGetData = () => {
       unsubscribe();
     };
   }, []);
+  // Fetch and listen for rooms
+  useEffect(() => {
+    const eleBillCollectionRef = collection(db, "eleBill");
+    const unsubscribe = onSnapshot(
+      eleBillCollectionRef,
+      (querySnapshot) => {
+        const data = querySnapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+        setEleBill(data);
+      },
+      (snapshotError) => {
+        console.error("Error fetching tenant credentials:", snapshotError);
+        setError(snapshotError);
+      }
+    );
 
+    return () => {
+      unsubscribe();
+    };
+  }, []);
+  // Fetch and listen for rooms
+  useEffect(() => {
+    const rentCollectionRef = collection(db, "rentdue");
+    const unsubscribe = onSnapshot(
+      rentCollectionRef,
+      (querySnapshot) => {
+        const data = querySnapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+        setRentdue(data);
+      },
+      (snapshotError) => {
+        console.error("Error fetching tenant credentials:", snapshotError);
+        setError(snapshotError);
+      }
+    );
+
+    return () => {
+      unsubscribe();
+    };
+  }, []);
+  useEffect(() => {
+    const expenseCollectionRef = collection(db, "expenseTracker");
+    const unsubscribe = onSnapshot(
+      expenseCollectionRef,
+      (querySnapshot) => {
+        const data = querySnapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+        setExpenseTracker(data);
+      },
+      (snapshotError) => {
+        console.error("Error fetching tenant credentials:", snapshotError);
+        setError(snapshotError);
+      }
+    );
+
+    return () => {
+      unsubscribe();
+    };
+  }, []);
   return {
     loading,
     error,
@@ -178,6 +245,9 @@ const useGetData = () => {
     masterData,
     rooms,
     Role,
+    rentdue,
+    expenseTracker,
+    eleBill,
     mergeTenantData,
   };
 };

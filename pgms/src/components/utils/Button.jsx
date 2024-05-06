@@ -37,7 +37,7 @@ const Button = ({ role, label, variant, customClass, url, onClick, type, icon, r
             ) : null}
             {label ? label : null}
           </span>
-        </button >
+        </button>
       ) : (
         <Link
           className={`${style[variant]} ${baseStyle} ${customClass} role--${role}`}

@@ -27,6 +27,9 @@ import Title from "./components/utils/Title";
 import useGetData from "./hooks/getData";
 import SpinnerComponent from "./components/Spinner";
 import { Spinner } from "@chakra-ui/react";
+import SmallScreenAlert from "./components/SmallScreenAlert";
+
+
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem("token"));
@@ -84,9 +87,10 @@ function App() {
     <>
       <AuthProvider>
         <BrowserRouter>
+          <SmallScreenAlert />
           <Sidebar>
             <div className="flex flex-col gap-1 mb-5  bg-slate-200 p-4 rounded-xl">
-              <div className="flex justify-between items-start">
+              <div className="flex justify-between items-start max-sm:flex-col-reverse max-sm:gap-6">
                 <div className="flex flex-col">
                   <Title size={"xl"}>Pg Management Dashboard</Title>
                   <div className="flex gap-1 capitalize text-xl text-gray-5  00 font-medium tracking-[-1.5px]">
@@ -96,6 +100,7 @@ function App() {
                     </span>
                   </div>
                 </div>
+
                 <div className="flex items-center gap-3">
                   {isLoggedIn ? (
                     <>

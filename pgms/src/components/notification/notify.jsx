@@ -13,6 +13,7 @@ import {
   Flex,
   Badge,
   Button,
+  Skeleton,
 } from "@chakra-ui/react";
 import { redirect } from "react-router-dom";
 
@@ -26,6 +27,7 @@ const Notify = ({ onlyNotification = false }) => {
 
   const date = new Date();
   date.setDate(date.getDate() + 7);
+
   const formatDate = (date) => {
     const options = {
       year: "numeric",
@@ -78,8 +80,7 @@ const Notify = ({ onlyNotification = false }) => {
               );
             }
           });
-        });
-        console.log(name);
+        }); 
 
         setNotifications(userNotifications);
         setLoading(false);
@@ -160,42 +161,44 @@ const Notify = ({ onlyNotification = false }) => {
                 )}
               </div>
             </MenuButton>
-            <MenuList className="p-3 max-h-[350px] overflow-y-auto space-y-1">
-              {Object.entries(notifications).map(
-                ([category, categoryNotifs]) => (
-                  <div key={category} className="space-y-2">
-                    <Text fontWeight="bold" color="blue.500">
-                      {category.charAt(0).toUpperCase() + category.slice(1)}
-                    </Text>
-                    {categoryNotifs.map((notif, index) => (
-                      <MenuItem
-                        key={index}
-                        onClick={() => {
-                          toggleReadStatus(category, index)
-                        }}
-                        className={` border border-primary/10 rounded-lg p-3 hover:bg-primary/10 transition-colors ease-in-out duration-300`}
-                      >
-                        <Flex direction={"column"}>
-                          <Text fontSize="xs" color="gray.500">
-                            {formatDate(date)}
-                          </Text>
-                          <Flex
-                            justifyContent="space-between"
-                            alignItems="center"
-                            gap={15}
-                          >
-                            <Text>{notif.message}</Text>
-                            {!notif.read && (
-                              <Badge colorScheme="red">Unread</Badge>
-                            )}
+            <Skeleton isLoaded={!loading}>
+              <MenuList className="p-3 max-h-[350px] overflow-y-auto space-y-1">
+                {Object.entries(notifications).map(
+                  ([category, categoryNotifs]) => (
+                    <div key={category} className="space-y-2">
+                      <Text fontWeight="bold" color="blue.500">
+                        {category.charAt(0).toUpperCase() + category.slice(1)}
+                      </Text>
+                      {categoryNotifs.map((notif, index) => (
+                        <MenuItem
+                          key={index}
+                          onClick={() => {
+                            toggleReadStatus(category, index)
+                          }}
+                          className={` border border-primary/10 rounded-lg p-3 hover:bg-primary/10 transition-colors ease-in-out duration-300`}
+                        >
+                          <Flex direction={"column"}>
+                            <Text fontSize="xs" color="gray.500">
+                              {formatDate(date)}
+                            </Text>
+                            <Flex
+                              justifyContent="space-between"
+                              alignItems="center"
+                              gap={15}
+                            >
+                              <Text>{notif.message}</Text>
+                              {!notif.read && (
+                                <Badge colorScheme="red">Unread</Badge>
+                              )}
+                            </Flex>
                           </Flex>
-                        </Flex>
-                      </MenuItem>
-                    ))}
-                  </div>
-                )
-              )}
-            </MenuList>
+                        </MenuItem>
+                      ))}
+                    </div>
+                  )
+                )}
+              </MenuList>
+            </Skeleton>
           </Menu>
         </>
       ) : (

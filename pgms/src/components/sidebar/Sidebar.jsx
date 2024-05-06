@@ -4,7 +4,7 @@ import Logo from "../utils/Logo";
 import Button from "../utils/Button";
 import useGetData from "../../hooks/getData";
 
-const navitems = ["Dashboard"  ];
+const navitems = ["Dashboard"];
 
 const userItems = {
   Users: ["Electricity Bill", "Rent Due", "Other Expenses"],
@@ -17,7 +17,7 @@ const Sidebar = ({
   customClass,
   children,
 }) => {
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(true);
   const { Role } = useGetData();
   const toggleDropdown = () => {
     setIsDropdownOpen(!isDropdownOpen);
@@ -26,9 +26,8 @@ const Sidebar = ({
   return (
     <section className="font-primary">
       <div
-        className={`flex flex-col md:flex-row ${
-          customClass ? customClass : ""
-        } px-[16px] `}
+        className={`flex flex-col md:flex-row ${customClass ? customClass : ""
+          } px-[16px] `}
       >
         <div className="w-full md:w-64 lg:w-80 ">
           <div className="flex items-center justify-start mt-5 text-primary text-4xl font-bold">
@@ -53,7 +52,7 @@ const Sidebar = ({
                   <div className="relative">
                     <Link
                       to={"/users"}
-                      className="py-2 px-4 rounded flex justify-between items-center w-full hover:bg-primary hover:text-white transition duration-300 font-bold"
+                      className="py-2 px-4 group rounded flex justify-between items-center w-full hover:bg-primary hover:text-white transition duration-300 font-bold"
                       onClick={toggleDropdown}
                     >
                       tenants
@@ -61,13 +60,13 @@ const Sidebar = ({
                         <img
                           src="https://img.icons8.com/ios/50/000000/expand-arrow--v1.png"
                           alt="arrow"
-                          className="w-3 h-3"
+                          className="w-3 h-3 group-hover:invert transition duration-300"
                         />
                       ) : (
                         <img
                           src="https://img.icons8.com/ios/50/000000/collapse-arrow--v1.png"
                           alt="arrow"
-                          className="w-3 h-3"
+                          className="w-3 h-3 group-hover:invert transition duration-300"
                         />
                       )}
                     </Link>
@@ -92,8 +91,9 @@ const Sidebar = ({
         </div>
 
         {/* Content */}
-        <div className="container ms-0 max-w-[1460px]">
-          <div className="md:mt-5 md:ms-10">{children}</div>
+
+        <div className="container mt-8">
+          {children}
         </div>
       </div>
     </section>
