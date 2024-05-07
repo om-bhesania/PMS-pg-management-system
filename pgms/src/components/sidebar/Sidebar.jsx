@@ -4,7 +4,7 @@ import Logo from "../utils/Logo";
 import Button from "../utils/Button";
 import useGetData from "../../hooks/getData";
 
-const navitems = ["Dashboard"];
+const navitems = ["Dashboard", "Profile"];
 
 const userItems = {
   Users: ["Electricity Bill", "Rent Due", "Other Expenses"],

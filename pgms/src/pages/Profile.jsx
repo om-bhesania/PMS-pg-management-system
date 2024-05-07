@@ -16,15 +16,7 @@ import {
   Stack,
   Input,
 } from "@chakra-ui/react";
-import {
-  collection,
-  query,
-  where,
-  getDocs,
-  setDoc,
-  doc,
-} from "firebase/firestore";
-import { sendPasswordResetEmail } from "firebase/auth";
+import { collection, query, where, getDocs, setDoc, doc } from "firebase/firestore";
 import { FaMoneyBill, FaBolt } from "react-icons/fa";
 import { db } from "../firebase/firebase";
 import Notify from "../components/notification/notify";
@@ -33,17 +25,14 @@ import Button from "../components/utils/Button";
 import { Link } from "react-router-dom";
 import CryptoJS from "crypto-js"; // Encryption library
 
-// Secure encryption key (keep it secret)
-const ENCRYPTION_KEY = "your-secure-encryption-key";
 
-const encryptPassword = (password) =>
-  CryptoJS.AES.encrypt(password, ENCRYPTION_KEY).toString();
-const decryptPassword = (encryptedPassword) => {
-  const bytes = CryptoJS.AES.decrypt(encryptedPassword, ENCRYPTION_KEY);
-  return bytes.toString(CryptoJS.enc.Utf8);
+const ENCRYPTION_KEY = "this@is@secret@key__";
+
+
+const isBillActive = (endDate) => {
+  const today = new Date();
+  return today <= new Date(endDate);
 };
-
-const isBillActive = (endDate) => new Date() <= new Date(endDate);
 
 const Profile = () => {
   const [tenantInfo, setTenantInfo] = useState(null);
@@ -52,28 +41,20 @@ const Profile = () => {
   const [edit, setEdit] = useState(false);
   const [rentDue, setRentDue] = useState([]);
   const [eleBill, setEleBill] = useState([]);
-  const toast = useToast();
-  const currentEmail = sessionStorage.getItem("email");
-
   const [oldPassword, setOldPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  console.log(oldPassword);
+  const toast = useToast();
+  const currentEmail = sessionStorage.getItem("email");
 
   useEffect(() => {
     const fetchProfileData = async () => {
-      if (!currentEmail) {
-        toast({
-          title: "Error",
-          description: "No email found in sessionStorage.",
-          status: "error",
-          duration: 5000,
-          isClosable: true,
-        });
-        return;
-      }
-
       try {
-        // Fetch tenant information
+        if (!currentEmail) {
+          throw new Error("No email found in sessionStorage.");
+        }
+
         const tenantQuery = query(
           collection(db, "tenants"),
           where("tenantEmail", "==", currentEmail)
@@ -88,7 +69,7 @@ const Profile = () => {
         setTenantInfo(tenantData);
         setEditableTenantInfo(tenantData);
 
-        // Fetch additional data
+        // Fetch rent due and electricity bill data
         const roomNumber = tenantData.tenantRoom;
 
         const rentDueQuery = query(
@@ -131,18 +112,11 @@ const Profile = () => {
     };
 
     fetchProfileData();
-  }, [toast, currentEmail]);
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setEditableTenantInfo((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
+  }, [toast]);
 
   const toggleEditMode = async () => {
     if (edit) {
+      // Save changes to the tenant's information
       try {
         const tenantQuery = query(
           collection(db, "tenants"),
@@ -175,10 +149,21 @@ const Profile = () => {
       }
     }
 
-    setEdit(!edit);
+    setEdit(!edit); // Toggle edit mode
   };
 
-  const handleChangePassword = async () => {
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setEditableTenantInfo((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+
+  const handleChangePassword = async (currentEmail, oldPassword, newPassword, confirmPassword) => { 
+  
+    // Validate new password and confirm password
     if (newPassword !== confirmPassword) {
       toast({
         title: "Error",
@@ -189,14 +174,14 @@ const Profile = () => {
       });
       return;
     }
-
+  
     try {
       const credsQuery = query(
         collection(db, "tenantCreds"),
-        where("email", "==", currentEmail)
+        where("email", "==", currentEmail) // Ensure valid field values
       );
       const credsSnapshot = await getDocs(credsQuery);
-
+  
       if (credsSnapshot.empty) {
         toast({
           title: "Error",
@@ -207,11 +192,33 @@ const Profile = () => {
         });
         return;
       }
-
+  
       const credsData = credsSnapshot.docs[0].data();
-      const decryptedStoredPassword = decryptPassword(credsData.password);
-
-      if (decryptedStoredPassword !== oldPassword) {
+      const encryptedStoredPassword = credsData.password;
+  
+      // Decrypt the stored password
+      console.log("Attempting to decrypt:", encryptedStoredPassword); // Check if this is valid
+      const bytes = CryptoJS.AES.decrypt(encryptedStoredPassword, ENCRYPTION_KEY);
+  
+      // Convert to UTF-8 and check if it results in an empty string
+      const decryptedStoredPassword = bytes.toString(CryptoJS.enc.Utf8);
+  
+      console.log("Decrypted Password:", decryptedStoredPassword); // Check if it's empty or not
+  
+      if (!decryptedStoredPassword) {
+        console.error("Decryption resulted in an empty output");
+        toast({
+          title: "Error",
+          description: "Failed to decrypt the stored password.",
+          status: "error",
+          duration: 5000,
+          isClosable: true,
+        });
+        return;
+      }
+  
+      // Compare decrypted password with the user-provided old password
+      if (decryptedStoredPassword.trim() !== oldPassword.trim()) {
         toast({
           title: "Error",
           description: "Old password is incorrect.",
@@ -221,15 +228,17 @@ const Profile = () => {
         });
         return;
       }
-
-      const encryptedNewPassword = encryptPassword(newPassword);
-
+  
+      // Encrypt the new password
+      const encryptedNewPassword = CryptoJS.AES.encrypt(newPassword, ENCRYPTION_KEY).toString();
+  
+      // Update Firestore with the new encrypted password
       await setDoc(
         doc(db, "tenantCreds", credsSnapshot.docs[0].id),
         { password: encryptedNewPassword },
         { merge: true }
       );
-
+  
       toast({
         title: "Success",
         description: "Password changed successfully.",
@@ -237,11 +246,13 @@ const Profile = () => {
         duration: 5000,
         isClosable: true,
       });
-
+  
+      // Reset input fields
       setOldPassword("");
       setNewPassword("");
       setConfirmPassword("");
     } catch (error) {
+      console.error("Error in handleChangePassword:", error);
       toast({
         title: "Error",
         description: "An error occurred while changing the password.",
@@ -251,28 +262,9 @@ const Profile = () => {
       });
     }
   };
+  
 
-  const handleForgotPassword = async () => {
-    try {
-      await sendPasswordResetEmail(auth, currentEmail);
 
-      toast({
-        title: "Password Reset Sent",
-        description: "Check your email to reset your password.",
-        status: "info",
-        duration: 5000,
-        isClosable: true,
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "An error occurred while sending the password reset email.",
-        status: "error",
-        duration: 5000,
-        isClosable: true,
-      });
-    }
-  };
 
   return (
     <Box p={6} className="bg-white rounded-lg shadow-lg">
@@ -283,14 +275,15 @@ const Profile = () => {
               Welcome, {tenantInfo.tenantName.split(" ")[0]}
             </Heading>
 
+            {/* Profile Information */}
             <form className="flex flex-col space-y-2">
-              {/* Profile Information */}
-              <Stack direction="row" gap={6}>
+              <Stack direction={"row"} gap={6}>
                 <Stack className="flex-1">
                   <Title>Name</Title>
                   <Input
                     type="text"
                     name="tenantName"
+                    className="p-3 !pl-2 font-semibold !border-0"
                     value={editableTenantInfo.tenantName}
                     readOnly={!edit}
                     onChange={handleChange}
@@ -302,22 +295,25 @@ const Profile = () => {
                   <Input
                     type="text"
                     name="tenantEmail"
+                    className="p-3 !pl-2 font-semibold !border-0"
+                    value={editableTenantInfo.tenantEmail}
                     readOnly={!edit}
                     onChange={handleChange}
-                    value={editableTenantInfo.tenantEmail}
                   />
                 </Stack>
               </Stack>
 
-              <Stack direction="row" gap={6}>
+              {/* More Profile Fields */}
+              <Stack direction={"row"} gap={6}>
                 <Stack className="flex-1">
                   <Title>Contact</Title>
                   <Input
                     type="text"
                     name="tenantContact"
-                    value={editableTenantInfo.tenantContact}
+                    className="p-3 !pl-2 font-semibold !border-0"
                     readOnly={!edit}
                     onChange={handleChange}
+                    value={editableTenantInfo.tenantContact}
                   />
                 </Stack>
                 <Stack className="flex-1">
@@ -325,6 +321,7 @@ const Profile = () => {
                   <Input
                     type="text"
                     name="tenantRoom"
+                    className="p-3 !pl-2 font-semibold !border-0"
                     readOnly={!edit}
                     onChange={handleChange}
                     value={editableTenantInfo.tenantRoom}
@@ -332,12 +329,13 @@ const Profile = () => {
                 </Stack>
               </Stack>
 
-              <Stack direction="row" gap={6}>
+              <Stack direction={"row"} gap={6}>
                 <Stack className="flex-1">
                   <Title>Stay Duration</Title>
                   <Input
                     type="text"
                     name="tenantStay"
+                    className="p-3 !pl-2 font-semibold !border-0"
                     readOnly={!edit}
                     onChange={handleChange}
                     value={editableTenantInfo.tenantStay}
@@ -352,20 +350,18 @@ const Profile = () => {
 
               <Button
                 onClick={toggleEditMode}
-                variant={edit ? "primary" : "outline"}
-                colorScheme={edit ? "green" : "gray"}
-                size="sm"
-              >
-                {edit ? "Save" : "Edit"}
-              </Button>
+                label={edit ? "Save" : "Edit"}
+                variant={"primary"}
+                icon={`${edit ? 'fa-solid fa-floppy-disk' : 'fa-solid fa-edit'}`}
+                customClass="self-start !m-0 !mt-5"
+              />
             </form>
 
             {/* Change Password Section */}
-            <Box className="p-6 mt-8 bg-white rounded-lg shadow-lg">
+            {/* <Box className="p-6 mt-8 bg-white rounded-lg shadow-lg">
               <Heading as="h3" size="md" className="text-primary">
                 Change Password
               </Heading>
-
               <Stack spacing={4} className="mt-4">
                 <Stack>
                   <Title>Old Password</Title>
@@ -373,11 +369,11 @@ const Profile = () => {
                     type="password"
                     value={oldPassword}
                     onChange={(e) => setOldPassword(e.target.value)}
+                    className="border-gray-300"
+                    required
                   />
                   <Text className="text-sm text-gray-500">
-                    <Link to="#" onClick={handleForgotPassword}>
-                      Forgot Password?
-                    </Link>
+                    <Link to="#">Forgot Password?</Link>
                   </Text>
                 </Stack>
 
@@ -387,6 +383,8 @@ const Profile = () => {
                     type="password"
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
+                    className="border-gray-300"
+                    required
                   />
                 </Stack>
 
@@ -396,19 +394,22 @@ const Profile = () => {
                     type="password"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
+                    className="border-gray-300"
+                    required
                   />
                 </Stack>
               </Stack>
 
               <Button
                 variant="primary"
-                colorScheme="green"
+                className="mt-6 w-full"
+                type={'submit'}
+                label={'submit'}
                 onClick={handleChangePassword}
-                className="mt-6"
               >
                 Change Password
               </Button>
-            </Box>
+            </Box> */}
 
             {/* Rent Due and Electricity Bills */}
             <StatGroup className="p-4 rounded-lg shadow-md">
@@ -418,15 +419,18 @@ const Profile = () => {
               </Stat>
             </StatGroup>
 
-            <Stack direction="row">
-              <Flex direction="column" className="flex-1">
+            <Stack direction={"row"}>
+              {/* Rent Due */}
+              <Flex direction="column" gap={6} className="flex-1">
                 <Heading as="h3" size="md" className="text-primary">
                   Rent Due
                 </Heading>
                 <List spacing={3} className="p-4 rounded-lg shadow-md">
                   {rentDue.length === 0 ? (
                     <ListItem>
-                      <Badge colorScheme="blue">No rent due</Badge>
+                      <Badge variant="outline" colorScheme="blue">
+                        No rent due
+                      </Badge>
                     </ListItem>
                   ) : (
                     rentDue.map((bill, index) => (
@@ -441,14 +445,17 @@ const Profile = () => {
                 </List>
               </Flex>
 
-              <Flex direction="column" className="flex-1">
+              {/* Electricity Bills */}
+              <Flex direction="column" gap={6} className="flex-1">
                 <Heading as="h3" size="md" className="text-primary">
                   Electricity Bills
                 </Heading>
                 <List spacing={3} className="p-4 rounded-lg shadow-md">
                   {eleBill.length === 0 ? (
                     <ListItem>
-                      <Badge colorScheme="blue">No electricity bills</Badge>
+                      <Badge variant="outline" colorScheme="blue">
+                        No electricity bills
+                      </Badge>
                     </ListItem>
                   ) : (
                     eleBill.map((bill, index) => (
@@ -464,11 +471,13 @@ const Profile = () => {
               </Flex>
             </Stack>
 
+            {/* Notifications */}
             <Heading as="h3" size="md" className="text-primary">
               Notifications
             </Heading>
             <Notify onlyNotification />
 
+            {/* Logout */}
             <Flex justifyContent="flex-end">
               <Button
                 colorScheme="red"

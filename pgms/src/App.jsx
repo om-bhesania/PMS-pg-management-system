@@ -161,13 +161,17 @@ function App() {
                     path="/otherexpenses"
                     element={<ProtectedRoute component={Otherexpenses} />}
                   />
-                  <Route
-                    path="/profile/:name"
-                    element={<ProtectedRoute component={Profile} />} // Dynamic route
-                  />
+
                 </>
               )}
-
+              <Route
+                path="/profile/:name"
+                element={<ProtectedRoute component={Profile} />} // Dynamic route
+              />
+              <Route
+                path="/profile"
+                element={<ProtectedRoute component={Profile} />} // Dynamic route
+              />
               <Route path="/login" element={<Login />} />
               <Route path="/passgen" element={<TempPassGen />} />
             </Routes>

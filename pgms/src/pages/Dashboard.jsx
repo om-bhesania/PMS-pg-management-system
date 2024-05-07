@@ -101,8 +101,8 @@ const Dashboard = () => {
 
 
         <div className="flex items-start justify-center flex-row-reverse max-sm:flex-col-reverse h-full w-full mt-10">
-          <div className="flex flex-1 justify-center items-center w-full">
-            {income || expense ? (
+          <div className="flex flex-1 justify-center items-center w-full h-full">
+            {income > 0 || expense > 0 ? (
               <>
                 <div className="max-h-full">
                   <Pie
@@ -128,7 +128,7 @@ const Dashboard = () => {
                       labels: ["Income", "Expense"],
                       datasets: [
                         {
-                          data: [income || "0", expense || "0"],
+                          data: [income ? income : 0 , expense ? expense : "0"],
                           backgroundColor: ["#5cb85c", "#d9534f"],
                         },
                       ],
@@ -137,9 +137,21 @@ const Dashboard = () => {
                 </div>
               </>
             ) : (
-              <Flex align={'center'} justify={'center'} h={'100%'}>
-                <SpinnerComponent variant={'7xl'} />
-              </Flex>
+              <>
+                {loading ?
+                  (
+                    <>
+                      <Flex align={'center'} justify={'center'} h={'100%'}>
+                        <SpinnerComponent variant={'7xl'} />
+                      </Flex>
+                    </>
+                  ) : (
+                    <>
+                      <NoDataCard title={'No data'} message={'Currently no transactions have been made  '} />
+                    </>
+                  )}
+              </>
+
             )}
           </div>
           <div className="max-w-[337px] total-stats flex flex-col flex-1 space-y-7">
@@ -171,13 +183,13 @@ const Dashboard = () => {
             </Flex>
           </>
         ) : (
-          <Stack gap={5}>
-            <Stack>
+          <Stack gap={5} className='mt-10'>
+            {/* <Stack>
               <Title size={'lg'}>
                 Your Notifications
               </Title>
               <Notify onlyNotification />
-            </Stack>
+            </Stack> */}
             <Stack>
               <Title size={'lg'}>
                 Server Notifications
