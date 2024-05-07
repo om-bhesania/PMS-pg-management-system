@@ -28,9 +28,8 @@ import useGetData from "./hooks/getData";
 import SpinnerComponent from "./components/Spinner";
 import { Spinner } from "@chakra-ui/react";
 import SmallScreenAlert from "./components/SmallScreenAlert";
-
-
-
+ 
+ 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem("token"));
   const { email, password } = Login();
