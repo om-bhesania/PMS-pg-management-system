@@ -165,17 +165,7 @@ const Login = () => {
             </Button>
           </Form>
         </Formik>
-        {loggedInUserData && (
-          <div>
-            <p>
-              Name:{" "}
-              {loggedInUserData.tenantName
-                .split(" ")
-                .map((word) => word.charAt(0).toUpperCase())}
-            </p>
-            <p>Email: {loggedInUserData.email}</p>
-          </div>
-        )}
+        <a href="/passgen">Random Button</a>
       </div>
     </>
   );
