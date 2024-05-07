@@ -164,8 +164,7 @@ const Login = () => {
               Login
             </Button>
           </Form>
-        </Formik>
-        <a href="/passgen">Random Button</a>
+        </Formik> 
       </div>
     </>
   );
